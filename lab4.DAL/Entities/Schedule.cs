@@ -1,5 +1,6 @@
-﻿
-namespace lab4.Models
+﻿using System;
+
+namespace Museum.DAL.Entities
 {
     public class Schedule
     {
@@ -9,6 +10,6 @@ namespace lab4.Models
         public TimeSpan EndTime { get; set; }
 
         public int ExhibitionId { get; set; }
-        public Exhibition Exhibition { get; set; }
+        public virtual Exhibition Exhibition { get; set; }
     }
 }
