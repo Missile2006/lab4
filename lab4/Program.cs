@@ -1,6 +1,7 @@
 ﻿using lab4.Models;
 using Microsoft.EntityFrameworkCore;
 
+
 namespace lab4
 {
     class Program
