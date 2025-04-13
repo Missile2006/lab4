@@ -1,16 +1,21 @@
-﻿using System;
-using System.Linq;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Museum.DAL.Context;
 using Museum.DAL.Interfaces;
 using Museum.DAL.Repositories;
 using Museum.DAL.Entities;
+using Museum.BLL.Services;
+using Museum.BLL.Strategies.Models;
 
 namespace Museum.ConsoleUI
 {
     class Program
     {
         private static IUnitOfWork _unitOfWork;
+        private static ExhibitionService _exhibitionService;
+        private static ScheduleService _scheduleService;
+        private static VisitService _visitService;
+        private static TourService _tourService;
+        private static ReportService _reportService;
 
         static void Main(string[] args)
         {
@@ -60,6 +65,7 @@ namespace Museum.ConsoleUI
             }
         }
 
+
         static void InitializeDatabase()
         {
             var options = new DbContextOptionsBuilder<MuseumContext>()
@@ -67,10 +73,16 @@ namespace Museum.ConsoleUI
                 .Options;
 
             var context = new MuseumContext(options);
-            _unitOfWork = new UnitOfWork(context);
+            var unitOfWork = new UnitOfWork(context);
+
+            _exhibitionService = new ExhibitionService(unitOfWork);
+            _scheduleService = new ScheduleService(unitOfWork);
+            _visitService = new VisitService(unitOfWork);
+            _tourService = new TourService(unitOfWork);
+            _reportService = new ReportService(unitOfWork);
 
             // Додамо тестові дані при першому запуску
-            if (!_unitOfWork.Exhibitions.GetAll().Any())
+            if (!_exhibitionService.GetAllExhibitions().Any())
             {
                 AddSampleData();
             }
@@ -97,9 +109,8 @@ namespace Museum.ConsoleUI
                 EndDate = DateTime.Now.AddDays(20)
             };
 
-            _unitOfWork.Exhibitions.Add(exhibition1);
-            _unitOfWork.Exhibitions.Add(exhibition2);
-            _unitOfWork.SaveChanges();
+            _exhibitionService.AddExhibition(exhibition1);
+            _exhibitionService.AddExhibition(exhibition2);
 
             // Додаємо розклади
             var schedule1 = new Schedule
@@ -118,9 +129,8 @@ namespace Museum.ConsoleUI
                 ExhibitionId = exhibition2.ExhibitionId
             };
 
-            _unitOfWork.Schedules.Add(schedule1);
-            _unitOfWork.Schedules.Add(schedule2);
-            _unitOfWork.SaveChanges();
+            _scheduleService.AddSchedule(schedule1);
+            _scheduleService.AddSchedule(schedule2);
 
             Console.WriteLine("Додано тестові дані для демонстрації.");
         }
@@ -177,7 +187,7 @@ namespace Museum.ConsoleUI
 
         static void ShowAllExhibitions()
         {
-            var exhibitions = _unitOfWork.Exhibitions.GetAll();
+            var exhibitions = _exhibitionService.GetAllExhibitions();
 
             Console.WriteLine("\nСписок всіх експозицій:");
             Console.WriteLine("ID\tНазва\t\tТема\tАудиторія\tПочаток\t\tКінець");
@@ -224,103 +234,99 @@ namespace Museum.ConsoleUI
                 EndDate = endDate
             };
 
-            _unitOfWork.Exhibitions.Add(exhibition);
-            _unitOfWork.SaveChanges();
-
-            Console.WriteLine("Експозицію успішно додано!");
+            try
+            {
+                _exhibitionService.AddExhibition(exhibition);
+                Console.WriteLine("Експозицію успішно додано!");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Помилка: {ex.Message}");
+            }
         }
 
         static void EditExhibition()
         {
             ShowAllExhibitions();
-
             Console.Write("\nВведіть ID експозиції для редагування: ");
+
             if (!int.TryParse(Console.ReadLine(), out int id))
             {
                 Console.WriteLine("Невірний формат ID.");
                 return;
             }
 
-            var exhibition = _unitOfWork.Exhibitions.GetById(id);
-            if (exhibition == null)
+            try
             {
-                Console.WriteLine("Експозиція з таким ID не знайдена.");
-                return;
+                var exhibition = _exhibitionService.GetExhibition(id);
+                if (exhibition == null)
+                {
+                    Console.WriteLine("Експозиція з таким ID не знайдена.");
+                    return;
+                }
+
+                Console.WriteLine("\nПоточні дані:");
+                Console.WriteLine($"Назва: {exhibition.Title}");
+                Console.WriteLine($"Тема: {exhibition.Theme}");
+                Console.WriteLine($"Аудиторія: {exhibition.TargetAudience}");
+                Console.WriteLine($"Початок: {exhibition.StartDate.ToShortDateString()}");
+                Console.WriteLine($"Кінець: {exhibition.EndDate.ToShortDateString()}");
+
+                Console.WriteLine("\nВведіть нові дані (залиште порожнім, щоб не змінювати):");
+                Console.Write("Нова назва: ");
+                var newTitle = Console.ReadLine();
+                if (!string.IsNullOrEmpty(newTitle))
+                    exhibition.Title = newTitle;
+
+                Console.Write("Нова тема: ");
+                var newTheme = Console.ReadLine();
+                if (!string.IsNullOrEmpty(newTheme))
+                    exhibition.Theme = newTheme;
+
+                Console.Write("Нова аудиторія: ");
+                var newAudience = Console.ReadLine();
+                if (!string.IsNullOrEmpty(newAudience))
+                    exhibition.TargetAudience = newAudience;
+
+                Console.Write("Нова дата початку (рррр-мм-дд): ");
+                var startDateInput = Console.ReadLine();
+                if (!string.IsNullOrEmpty(startDateInput) && DateTime.TryParse(startDateInput, out DateTime newStartDate))
+                    exhibition.StartDate = newStartDate;
+
+                Console.Write("Нова дата завершення (рррр-мм-дд): ");
+                var endDateInput = Console.ReadLine();
+                if (!string.IsNullOrEmpty(endDateInput) && DateTime.TryParse(endDateInput, out DateTime newEndDate))
+                    exhibition.EndDate = newEndDate;
+
+                _exhibitionService.UpdateExhibition(exhibition);
+                Console.WriteLine("Дані експозиції успішно оновлено!");
             }
-
-            Console.WriteLine("\nПоточні дані:");
-            Console.WriteLine($"Назва: {exhibition.Title}");
-            Console.WriteLine($"Тема: {exhibition.Theme}");
-            Console.WriteLine($"Аудиторія: {exhibition.TargetAudience}");
-            Console.WriteLine($"Початок: {exhibition.StartDate.ToShortDateString()}");
-            Console.WriteLine($"Кінець: {exhibition.EndDate.ToShortDateString()}");
-
-            Console.WriteLine("\nВведіть нові дані (залиште порожнім, щоб не змінювати):");
-
-            Console.Write("Нова назва: ");
-            var newTitle = Console.ReadLine();
-            if (!string.IsNullOrEmpty(newTitle))
-                exhibition.Title = newTitle;
-
-            Console.Write("Нова тема: ");
-            var newTheme = Console.ReadLine();
-            if (!string.IsNullOrEmpty(newTheme))
-                exhibition.Theme = newTheme;
-
-            Console.Write("Нова аудиторія: ");
-            var newAudience = Console.ReadLine();
-            if (!string.IsNullOrEmpty(newAudience))
-                exhibition.TargetAudience = newAudience;
-
-            Console.Write("Нова дата початку (рррр-мм-дд): ");
-            var startDateInput = Console.ReadLine();
-            if (!string.IsNullOrEmpty(startDateInput) && DateTime.TryParse(startDateInput, out DateTime newStartDate))
-                exhibition.StartDate = newStartDate;
-
-            Console.Write("Нова дата завершення (рррр-мм-дд): ");
-            var endDateInput = Console.ReadLine();
-            if (!string.IsNullOrEmpty(endDateInput) && DateTime.TryParse(endDateInput, out DateTime newEndDate))
-                exhibition.EndDate = newEndDate;
-
-            _unitOfWork.Exhibitions.Update(exhibition);
-            _unitOfWork.SaveChanges();
-
-            Console.WriteLine("Дані експозиції успішно оновлено!");
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Помилка: {ex.Message}");
+            }
         }
 
         static void DeleteExhibition()
         {
             ShowAllExhibitions();
-
             Console.Write("\nВведіть ID експозиції для видалення: ");
+
             if (!int.TryParse(Console.ReadLine(), out int id))
             {
                 Console.WriteLine("Невірний формат ID.");
                 return;
             }
 
-            var exhibition = _unitOfWork.Exhibitions.GetById(id);
-            if (exhibition == null)
+            try
             {
-                Console.WriteLine("Експозиція з таким ID не знайдена.");
-                return;
+                _exhibitionService.DeleteExhibition(id);
+                Console.WriteLine("Експозицію успішно видалено!");
             }
-
-            // Перевірка наявності пов'язаних даних
-            var hasSchedules = _unitOfWork.Schedules.GetByExhibitionId(id).Any();
-            var hasVisits = _unitOfWork.Visits.GetByExhibitionId(id).Any();
-            var hasTours = _unitOfWork.Tours.GetByExhibitionId(id).Any();
-
-            if (hasSchedules || hasVisits || hasTours)
+            catch (Exception ex)
             {
-                Console.WriteLine("Неможливо видалити експозицію, оскільки є пов'язані розклади, візити або екскурсії.");
-                return;
+                Console.WriteLine($"Помилка: {ex.Message}");
             }
-
-            _unitOfWork.Exhibitions.Delete(id);
-            _unitOfWork.SaveChanges();
-
-            Console.WriteLine("Експозицію успішно видалено!");
         }
 
         static void SearchExhibitionsByTheme()
@@ -328,12 +334,18 @@ namespace Museum.ConsoleUI
             Console.Write("\nВведіть тему для пошуку: ");
             var theme = Console.ReadLine();
 
-            var exhibitions = _unitOfWork.Exhibitions.GetByTheme(theme);
-
-            Console.WriteLine("\nРезультати пошуку:");
-            foreach (var ex in exhibitions)
+            try
             {
-                Console.WriteLine($"{ex.ExhibitionId}: {ex.Title} ({ex.Theme})");
+                var exhibitions = _exhibitionService.SearchExhibitionsByTheme(theme);
+                Console.WriteLine("\nРезультати пошуку:");
+                foreach (var ex in exhibitions)
+                {
+                    Console.WriteLine($"{ex.ExhibitionId}: {ex.Title} ({ex.Theme})");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Помилка: {ex.Message}");
             }
         }
 
@@ -342,12 +354,18 @@ namespace Museum.ConsoleUI
             Console.Write("\nВведіть цільову аудиторію для пошуку: ");
             var audience = Console.ReadLine();
 
-            var exhibitions = _unitOfWork.Exhibitions.GetByTargetAudience(audience);
-
-            Console.WriteLine("\nРезультати пошуку:");
-            foreach (var ex in exhibitions)
+            try
             {
-                Console.WriteLine($"{ex.ExhibitionId}: {ex.Title} (для {ex.TargetAudience})");
+                var exhibitions = _exhibitionService.SearchExhibitionsByAudience(audience);
+                Console.WriteLine("\nРезультати пошуку:");
+                foreach (var ex in exhibitions)
+                {
+                    Console.WriteLine($"{ex.ExhibitionId}: {ex.Title} (для {ex.TargetAudience})");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Помилка: {ex.Message}");
             }
         }
         #endregion
@@ -400,113 +418,129 @@ namespace Museum.ConsoleUI
 
         static void ShowAllSchedules()
         {
-            var schedules = _unitOfWork.Schedules.GetAll();
-
+            var schedules = _scheduleService.GetAllSchedules();
             Console.WriteLine("\nСписок всіх розкладів:");
             Console.WriteLine("ID\tДата\t\tЧас\t\tЕкспозиція");
+
             foreach (var s in schedules)
             {
-                var exhibition = _unitOfWork.Exhibitions.GetById(s.ExhibitionId);
+                var exhibition = _exhibitionService.GetExhibition(s.ExhibitionId);
                 Console.WriteLine($"{s.ScheduleId}\t{s.Date.ToShortDateString()}\t" +
-                                $"{s.StartTime}-{s.EndTime}\t{exhibition.Title}");
+                    $"{s.StartTime}-{s.EndTime}\t{exhibition.Title}");
             }
         }
 
         static void AddSchedule()
         {
             ShowAllExhibitions();
-
             Console.Write("\nВведіть ID експозиції: ");
+
             if (!int.TryParse(Console.ReadLine(), out int exhibitionId))
             {
                 Console.WriteLine("Невірний формат ID.");
                 return;
             }
 
-            var exhibition = _unitOfWork.Exhibitions.GetById(exhibitionId);
-            if (exhibition == null)
+            try
             {
-                Console.WriteLine("Експозиція з таким ID не знайдена.");
-                return;
+                var exhibition = _exhibitionService.GetExhibition(exhibitionId);
+                if (exhibition == null)
+                {
+                    Console.WriteLine("Експозиція з таким ID не знайдена.");
+                    return;
+                }
+
+                Console.Write("Дата (рррр-мм-дд): ");
+                DateTime date;
+                while (!DateTime.TryParse(Console.ReadLine(), out date))
+                {
+                    Console.Write("Невірний формат дати. Спробуйте ще раз (рррр-мм-дд): ");
+                }
+
+                Console.Write("Час початку (гг:хх): ");
+                TimeSpan startTime;
+                while (!TimeSpan.TryParse(Console.ReadLine(), out startTime))
+                {
+                    Console.Write("Невірний формат часу. Спробуйте ще раз (гг:хх): ");
+                }
+
+                Console.Write("Час завершення (гг:хх): ");
+                TimeSpan endTime;
+                while (!TimeSpan.TryParse(Console.ReadLine(), out endTime) || endTime <= startTime)
+                {
+                    Console.Write("Невірний формат часу або час раніше початку. Спробуйте ще раз (гг:хх): ");
+                }
+
+                var schedule = new Schedule
+                {
+                    Date = date,
+                    StartTime = startTime,
+                    EndTime = endTime,
+                    ExhibitionId = exhibitionId
+                };
+
+                if (!_scheduleService.IsTimeSlotAvailable(exhibitionId, date, startTime, endTime))
+                {
+                    Console.WriteLine("Цей часовий слот вже зайнятий.");
+                    return;
+                }
+
+                _scheduleService.AddSchedule(schedule);
+                Console.WriteLine("Розклад успішно додано!");
             }
-
-            Console.Write("Дата (рррр-мм-дд): ");
-            DateTime date;
-            while (!DateTime.TryParse(Console.ReadLine(), out date))
+            catch (Exception ex)
             {
-                Console.Write("Невірний формат дати. Спробуйте ще раз (рррр-мм-дд): ");
+                Console.WriteLine($"Помилка: {ex.Message}");
             }
-
-            Console.Write("Час початку (гг:хх): ");
-            TimeSpan startTime;
-            while (!TimeSpan.TryParse(Console.ReadLine(), out startTime))
-            {
-                Console.Write("Невірний формат часу. Спробуйте ще раз (гг:хх): ");
-            }
-
-            Console.Write("Час завершення (гг:хх): ");
-            TimeSpan endTime;
-            while (!TimeSpan.TryParse(Console.ReadLine(), out endTime) || endTime <= startTime)
-            {
-                Console.Write("Невірний формат часу або час раніше початку. Спробуйте ще раз (гг:хх): ");
-            }
-
-            var schedule = new Schedule
-            {
-                Date = date,
-                StartTime = startTime,
-                EndTime = endTime,
-                ExhibitionId = exhibitionId
-            };
-
-            _unitOfWork.Schedules.Add(schedule);
-            _unitOfWork.SaveChanges();
-
-            Console.WriteLine("Розклад успішно додано!");
         }
 
         static void DeleteSchedule()
         {
             ShowAllSchedules();
-
             Console.Write("\nВведіть ID розкладу для видалення: ");
+
             if (!int.TryParse(Console.ReadLine(), out int id))
             {
                 Console.WriteLine("Невірний формат ID.");
                 return;
             }
 
-            var schedule = _unitOfWork.Schedules.GetById(id);
-            if (schedule == null)
+            try
             {
-                Console.WriteLine("Розклад з таким ID не знайдений.");
-                return;
+                _scheduleService.DeleteSchedule(id);
+                Console.WriteLine("Розклад успішно видалено!");
             }
-
-            _unitOfWork.Schedules.Delete(id);
-            _unitOfWork.SaveChanges();
-
-            Console.WriteLine("Розклад успішно видалено!");
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Помилка: {ex.Message}");
+            }
         }
 
         static void ShowExhibitionSchedules()
         {
             ShowAllExhibitions();
-
             Console.Write("\nВведіть ID експозиції: ");
+
             if (!int.TryParse(Console.ReadLine(), out int id))
             {
                 Console.WriteLine("Невірний формат ID.");
                 return;
             }
 
-            var schedules = _unitOfWork.Schedules.GetByExhibitionId(id);
-            var exhibition = _unitOfWork.Exhibitions.GetById(id);
-
-            Console.WriteLine($"\nРозклад для експозиції '{exhibition.Title}':");
-            foreach (var s in schedules)
+            try
             {
-                Console.WriteLine($"{s.Date.ToShortDateString()}: {s.StartTime}-{s.EndTime}");
+                var schedules = _scheduleService.GetExhibitionSchedules(id);
+                var exhibition = _exhibitionService.GetExhibition(id);
+                Console.WriteLine($"\nРозклад для експозиції '{exhibition.Title}':");
+
+                foreach (var s in schedules)
+                {
+                    Console.WriteLine($"{s.Date.ToShortDateString()}: {s.StartTime}-{s.EndTime}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Помилка: {ex.Message}");
             }
         }
 
@@ -519,13 +553,20 @@ namespace Museum.ConsoleUI
                 Console.Write("Невірний формат дати. Спробуйте ще раз (рррр-мм-дд): ");
             }
 
-            var slots = _unitOfWork.Schedules.GetAvailableSchedules(date);
-
-            Console.WriteLine("\nДоступні часові слоти:");
-            foreach (var s in slots)
+            try
             {
-                var exhibition = _unitOfWork.Exhibitions.GetById(s.ExhibitionId);
-                Console.WriteLine($"{s.StartTime}-{s.EndTime} - {exhibition.Title}");
+                var slots = _scheduleService.GetAvailableSchedules(date);
+                Console.WriteLine("\nДоступні часові слоти:");
+
+                foreach (var s in slots)
+                {
+                    var exhibition = _exhibitionService.GetExhibition(s.ExhibitionId);
+                    Console.WriteLine($"{s.StartTime}-{s.EndTime} - {exhibition.Title}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Помилка: {ex.Message}");
             }
         }
         #endregion
@@ -578,89 +619,92 @@ namespace Museum.ConsoleUI
 
         static void ShowAllVisits()
         {
-            var visits = _unitOfWork.Visits.GetAll();
-
+            var visits = _visitService.GetAllVisits();
             Console.WriteLine("\nСписок всіх візитів:");
             Console.WriteLine("ID\tІм'я\t\tДата\t\tЦіна\tЕкспозиція");
+
             foreach (var v in visits)
             {
-                var exhibition = _unitOfWork.Exhibitions.GetById(v.ExhibitionId);
+                var exhibition = _exhibitionService.GetExhibition(v.ExhibitionId);
                 Console.WriteLine($"{v.VisitId}\t{v.VisitorName}\t{v.VisitDate.ToShortDateString()}\t" +
-                                $"{v.TicketPrice}\t{exhibition.Title}");
+                    $"{v.TicketPrice}\t{exhibition.Title}");
             }
         }
 
         static void AddVisit()
         {
             ShowAllExhibitions();
-
             Console.Write("\nВведіть ID експозиції: ");
+
             if (!int.TryParse(Console.ReadLine(), out int exhibitionId))
             {
                 Console.WriteLine("Невірний формат ID.");
                 return;
             }
 
-            var exhibition = _unitOfWork.Exhibitions.GetById(exhibitionId);
-            if (exhibition == null)
+            try
             {
-                Console.WriteLine("Експозиція з таким ID не знайдена.");
-                return;
+                var exhibition = _exhibitionService.GetExhibition(exhibitionId);
+                if (exhibition == null)
+                {
+                    Console.WriteLine("Експозиція з таким ID не знайдена.");
+                    return;
+                }
+
+                Console.Write("Ім'я відвідувача: ");
+                var name = Console.ReadLine();
+                Console.Write("Дата візиту (рррр-мм-дд): ");
+
+                DateTime visitDate;
+                while (!DateTime.TryParse(Console.ReadLine(), out visitDate) || visitDate < DateTime.Today)
+                {
+                    Console.Write("Невірний формат дати або дата в минулому. Спробуйте ще раз (рррр-мм-дд): ");
+                }
+
+                Console.Write("Ціна квитка: ");
+                decimal price;
+                while (!decimal.TryParse(Console.ReadLine(), out price) || price <= 0)
+                {
+                    Console.Write("Невірний формат ціни. Спробуйте ще раз: ");
+                }
+
+                var visit = new Visit
+                {
+                    VisitorName = name,
+                    VisitDate = visitDate,
+                    TicketPrice = price,
+                    ExhibitionId = exhibitionId
+                };
+
+                _visitService.AddVisit(visit);
+                Console.WriteLine("Візит успішно заплановано!");
             }
-
-            Console.Write("Ім'я відвідувача: ");
-            var name = Console.ReadLine();
-
-            Console.Write("Дата візиту (рррр-мм-дд): ");
-            DateTime visitDate;
-            while (!DateTime.TryParse(Console.ReadLine(), out visitDate) || visitDate < DateTime.Today)
+            catch (Exception ex)
             {
-                Console.Write("Невірний формат дати або дата в минулому. Спробуйте ще раз (рррр-мм-дд): ");
+                Console.WriteLine($"Помилка: {ex.Message}");
             }
-
-            Console.Write("Ціна квитка: ");
-            decimal price;
-            while (!decimal.TryParse(Console.ReadLine(), out price) || price <= 0)
-            {
-                Console.Write("Невірний формат ціни. Спробуйте ще раз: ");
-            }
-
-            var visit = new Visit
-            {
-                VisitorName = name,
-                VisitDate = visitDate,
-                TicketPrice = price,
-                ExhibitionId = exhibitionId
-            };
-
-            _unitOfWork.Visits.Add(visit);
-            _unitOfWork.SaveChanges();
-
-            Console.WriteLine("Візит успішно заплановано!");
         }
 
         static void DeleteVisit()
         {
             ShowAllVisits();
-
             Console.Write("\nВведіть ID візиту для скасування: ");
+
             if (!int.TryParse(Console.ReadLine(), out int id))
             {
                 Console.WriteLine("Невірний формат ID.");
                 return;
             }
 
-            var visit = _unitOfWork.Visits.GetById(id);
-            if (visit == null)
+            try
             {
-                Console.WriteLine("Візит з таким ID не знайдений.");
-                return;
+                _visitService.DeleteVisit(id);
+                Console.WriteLine("Візит успішно скасовано!");
             }
-
-            _unitOfWork.Visits.Delete(id);
-            _unitOfWork.SaveChanges();
-
-            Console.WriteLine("Візит успішно скасовано!");
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Помилка: {ex.Message}");
+            }
         }
 
         static void SearchVisitsByName()
@@ -668,13 +712,20 @@ namespace Museum.ConsoleUI
             Console.Write("\nВведіть ім'я або частину імені відвідувача: ");
             var name = Console.ReadLine();
 
-            var visits = _unitOfWork.Visits.GetByVisitorName(name);
-
-            Console.WriteLine("\nРезультати пошуку:");
-            foreach (var v in visits)
+            try
             {
-                var exhibition = _unitOfWork.Exhibitions.GetById(v.ExhibitionId);
-                Console.WriteLine($"{v.VisitDate.ToShortDateString()}: {v.VisitorName} - {exhibition.Title} ({v.TicketPrice} грн)");
+                var visits = _visitService.SearchVisitsByName(name);
+                Console.WriteLine("\nРезультати пошуку:");
+
+                foreach (var v in visits)
+                {
+                    var exhibition = _exhibitionService.GetExhibition(v.ExhibitionId);
+                    Console.WriteLine($"{v.VisitDate.ToShortDateString()}: {v.VisitorName} - {exhibition.Title} ({v.TicketPrice} грн)");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Помилка: {ex.Message}");
             }
         }
 
@@ -694,13 +745,20 @@ namespace Museum.ConsoleUI
                 Console.Write("Невірний формат дати або дата раніше початку. Спробуйте ще раз (рррр-мм-дд): ");
             }
 
-            var visits = _unitOfWork.Visits.GetByDateRange(startDate, endDate);
-
-            Console.WriteLine("\nРезультати пошуку:");
-            foreach (var v in visits)
+            try
             {
-                var exhibition = _unitOfWork.Exhibitions.GetById(v.ExhibitionId);
-                Console.WriteLine($"{v.VisitDate.ToShortDateString()}: {v.VisitorName} - {exhibition.Title}");
+                var visits = _visitService.SearchVisitsByDateRange(startDate, endDate);
+                Console.WriteLine("\nРезультати пошуку:");
+
+                foreach (var v in visits)
+                {
+                    var exhibition = _exhibitionService.GetExhibition(v.ExhibitionId);
+                    Console.WriteLine($"{v.VisitDate.ToShortDateString()}: {v.VisitorName} - {exhibition.Title}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Помилка: {ex.Message}");
             }
         }
         #endregion
@@ -723,7 +781,6 @@ namespace Museum.ConsoleUI
                 Console.Write("Оберіть опцію: ");
 
                 var choice = Console.ReadLine();
-
                 switch (choice)
                 {
                     case "1":
@@ -761,140 +818,164 @@ namespace Museum.ConsoleUI
 
         static void ShowAllTours()
         {
-            var tours = _unitOfWork.Tours.GetAll();
-
+            var tours = _tourService.GetAllTours();
             Console.WriteLine("\nСписок всіх екскурсій:");
             Console.WriteLine("ID\tДата\t\tГід\t\tТип\tЦіна\tЕкспозиція");
+
             foreach (var t in tours)
             {
-                var exhibition = _unitOfWork.Exhibitions.GetById(t.ExhibitionId);
+                var exhibition = _exhibitionService.GetExhibition(t.ExhibitionId);
                 var tourType = t.IsPrivate ? "Приватна" : "Групова";
                 Console.WriteLine($"{t.TourId}\t{t.TourDate.ToShortDateString()}\t{t.GuideName}\t" +
-                                $"{tourType}\t{t.Price}\t{exhibition.Title}");
+                    $"{tourType}\t{t.Price}\t{exhibition.Title}");
             }
         }
 
         static void AddTour()
         {
             ShowAllExhibitions();
-
             Console.Write("\nВведіть ID експозиції: ");
+
             if (!int.TryParse(Console.ReadLine(), out int exhibitionId))
             {
                 Console.WriteLine("Невірний формат ID.");
                 return;
             }
 
-            var exhibition = _unitOfWork.Exhibitions.GetById(exhibitionId);
-            if (exhibition == null)
+            try
             {
-                Console.WriteLine("Експозиція з таким ID не знайдена.");
-                return;
+                var exhibition = _exhibitionService.GetExhibition(exhibitionId);
+                if (exhibition == null)
+                {
+                    Console.WriteLine("Експозиція з таким ID не знайдена.");
+                    return;
+                }
+
+                Console.Write("Ім'я гіда: ");
+                var guideName = Console.ReadLine();
+                Console.Write("Дата екскурсії (рррр-мм-дд): ");
+
+                DateTime tourDate;
+                while (!DateTime.TryParse(Console.ReadLine(), out tourDate) || tourDate < DateTime.Today)
+                {
+                    Console.Write("Невірний формат дати або дата в минулому. Спробуйте ще раз (рррр-мм-дд): ");
+                }
+
+                Console.Write("Це приватна екскурсія? (так/ні): ");
+                var isPrivate = Console.ReadLine().ToLower() == "так";
+
+                Console.Write("Ціна: ");
+                decimal price;
+                while (!decimal.TryParse(Console.ReadLine(), out price) || price <= 0)
+                {
+                    Console.Write("Невірний формат ціни. Спробуйте ще раз: ");
+                }
+
+                var tour = new Tour
+                {
+                    TourDate = tourDate,
+                    GuideName = guideName,
+                    IsPrivate = isPrivate,
+                    Price = price,
+                    ExhibitionId = exhibitionId
+                };
+
+                _tourService.AddTour(tour);
+                Console.WriteLine("Екскурсію успішно додано!");
             }
-
-            Console.Write("Ім'я гіда: ");
-            var guideName = Console.ReadLine();
-
-            Console.Write("Дата екскурсії (рррр-мм-дд): ");
-            DateTime tourDate;
-            while (!DateTime.TryParse(Console.ReadLine(), out tourDate) || tourDate < DateTime.Today)
+            catch (Exception ex)
             {
-                Console.Write("Невірний формат дати або дата в минулому. Спробуйте ще раз (рррр-мм-дд): ");
+                Console.WriteLine($"Помилка: {ex.Message}");
             }
-
-            Console.Write("Це приватна екскурсія? (так/ні): ");
-            var isPrivate = Console.ReadLine().ToLower() == "так";
-
-            Console.Write("Ціна: ");
-            decimal price;
-            while (!decimal.TryParse(Console.ReadLine(), out price) || price <= 0)
-            {
-                Console.Write("Невірний формат ціни. Спробуйте ще раз: ");
-            }
-
-            var tour = new Tour
-            {
-                TourDate = tourDate,
-                GuideName = guideName,
-                IsPrivate = isPrivate,
-                Price = price,
-                ExhibitionId = exhibitionId
-            };
-
-            _unitOfWork.Tours.Add(tour);
-            _unitOfWork.SaveChanges();
-
-            Console.WriteLine("Екскурсію успішно додано!");
         }
 
         static void DeleteTour()
         {
             ShowAllTours();
-
             Console.Write("\nВведіть ID екскурсії для скасування: ");
+
             if (!int.TryParse(Console.ReadLine(), out int id))
             {
                 Console.WriteLine("Невірний формат ID.");
                 return;
             }
 
-            var tour = _unitOfWork.Tours.GetById(id);
-            if (tour == null)
+            try
             {
-                Console.WriteLine("Екскурсія з таким ID не знайдена.");
-                return;
+                _tourService.DeleteTour(id);
+                Console.WriteLine("Екскурсію успішно скасовано!");
             }
-
-            _unitOfWork.Tours.Delete(id);
-            _unitOfWork.SaveChanges();
-
-            Console.WriteLine("Екскурсію успішно скасовано!");
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Помилка: {ex.Message}");
+            }
         }
 
         static void ShowExhibitionTours()
         {
             ShowAllExhibitions();
-
             Console.Write("\nВведіть ID експозиції: ");
+
             if (!int.TryParse(Console.ReadLine(), out int id))
             {
                 Console.WriteLine("Невірний формат ID.");
                 return;
             }
 
-            var tours = _unitOfWork.Tours.GetByExhibitionId(id);
-            var exhibition = _unitOfWork.Exhibitions.GetById(id);
-
-            Console.WriteLine($"\nЕкскурсії для експозиції '{exhibition.Title}':");
-            foreach (var t in tours)
+            try
             {
-                var tourType = t.IsPrivate ? "Приватна" : "Групова";
-                Console.WriteLine($"{t.TourDate.ToShortDateString()}: {t.GuideName} ({tourType}) - {t.Price} грн");
+                var tours = _tourService.GetExhibitionTours(id);
+                var exhibition = _exhibitionService.GetExhibition(id);
+                Console.WriteLine($"\nЕкскурсії для експозиції '{exhibition.Title}':");
+
+                foreach (var t in tours)
+                {
+                    var tourType = t.IsPrivate ? "Приватна" : "Групова";
+                    Console.WriteLine($"{t.TourDate.ToShortDateString()}: {t.GuideName} ({tourType}) - {t.Price} грн");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Помилка: {ex.Message}");
             }
         }
 
         static void ShowPrivateTours()
         {
-            var tours = _unitOfWork.Tours.GetPrivateTours();
-
-            Console.WriteLine("\nПриватні екскурсії:");
-            foreach (var t in tours)
+            try
             {
-                var exhibition = _unitOfWork.Exhibitions.GetById(t.ExhibitionId);
-                Console.WriteLine($"{t.TourDate.ToShortDateString()}: {t.GuideName} - {exhibition.Title} ({t.Price} грн)");
+                var tours = _tourService.GetPrivateTours();
+                Console.WriteLine("\nПриватні екскурсії:");
+
+                foreach (var t in tours)
+                {
+                    var exhibition = _exhibitionService.GetExhibition(t.ExhibitionId);
+                    Console.WriteLine($"{t.TourDate.ToShortDateString()}: {t.GuideName} - {exhibition.Title} ({t.Price} грн)");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Помилка: {ex.Message}");
             }
         }
 
         static void ShowScheduledTours()
         {
-            var tours = _unitOfWork.Tours.GetScheduledTours();
-
-            Console.WriteLine("\nЗаплановані екскурсії:");
-            foreach (var t in tours)
+            try
             {
-                var exhibition = _unitOfWork.Exhibitions.GetById(t.ExhibitionId);
-                var tourType = t.IsPrivate ? "Приватна" : "Групова";
-                Console.WriteLine($"{t.TourDate.ToShortDateString()}: {t.GuideName} - {exhibition.Title} ({tourType})");
+                var tours = _tourService.GetScheduledTours();
+                Console.WriteLine("\nЗаплановані екскурсії:");
+
+                foreach (var t in tours)
+                {
+                    var exhibition = _exhibitionService.GetExhibition(t.ExhibitionId);
+                    var tourType = t.IsPrivate ? "Приватна" : "Групова";
+                    Console.WriteLine($"{t.TourDate.ToShortDateString()}: {t.GuideName} - {exhibition.Title} ({tourType})");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Помилка: {ex.Message}");
             }
         }
 
@@ -903,14 +984,21 @@ namespace Museum.ConsoleUI
             Console.Write("\nВведіть ім'я або частину імені гіда: ");
             var guideName = Console.ReadLine();
 
-            var tours = _unitOfWork.Tours.GetByGuideName(guideName);
-
-            Console.WriteLine("\nРезультати пошуку:");
-            foreach (var t in tours)
+            try
             {
-                var exhibition = _unitOfWork.Exhibitions.GetById(t.ExhibitionId);
-                var tourType = t.IsPrivate ? "Приватна" : "Групова";
-                Console.WriteLine($"{t.TourDate.ToShortDateString()}: {t.GuideName} - {exhibition.Title} ({tourType})");
+                var tours = _tourService.SearchToursByGuide(guideName);
+                Console.WriteLine("\nРезультати пошуку:");
+
+                foreach (var t in tours)
+                {
+                    var exhibition = _exhibitionService.GetExhibition(t.ExhibitionId);
+                    var tourType = t.IsPrivate ? "Приватна" : "Групова";
+                    Console.WriteLine($"{t.TourDate.ToShortDateString()}: {t.GuideName} - {exhibition.Title} ({tourType})");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Помилка: {ex.Message}");
             }
         }
         #endregion
@@ -930,7 +1018,6 @@ namespace Museum.ConsoleUI
                 Console.Write("Оберіть опцію: ");
 
                 var choice = Console.ReadLine();
-
                 switch (choice)
                 {
                     case "1":
@@ -959,13 +1046,20 @@ namespace Museum.ConsoleUI
 
         static void ShowCurrentExhibitionsReport()
         {
-            var currentExhibitions = _unitOfWork.Exhibitions.GetCurrentExhibitions(DateTime.Now);
-
-            Console.WriteLine("\nПоточні експозиції (на " + DateTime.Now.ToShortDateString() + "):");
-            Console.WriteLine("Назва\t\tТема\tАудиторія\tЗакінчується");
-            foreach (var ex in currentExhibitions)
+            try
             {
-                Console.WriteLine($"{ex.Title}\t{ex.Theme}\t{ex.TargetAudience}\t{ex.EndDate.ToShortDateString()}");
+                var currentExhibitions = _reportService.GetCurrentExhibitionsReport();
+                Console.WriteLine("\nПоточні експозиції (на " + DateTime.Now.ToShortDateString() + "):");
+                Console.WriteLine("Назва\t\tТема\tАудиторія\tЗакінчується");
+
+                foreach (var ex in currentExhibitions)
+                {
+                    Console.WriteLine($"{ex.Title}\t{ex.Theme}\t{ex.TargetAudience}\t{ex.EndDate.ToShortDateString()}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Помилка: {ex.Message}");
             }
         }
 
@@ -985,28 +1079,25 @@ namespace Museum.ConsoleUI
                 Console.Write("Невірний формат дати або дата раніше початку. Спробуйте ще раз (рррр-мм-дд): ");
             }
 
-            var visits = _unitOfWork.Visits.GetByDateRange(startDate, endDate);
-            var totalIncome = visits.Sum(v => v.TicketPrice);
-
-            Console.WriteLine($"\nЗвіт по візитам за період {startDate.ToShortDateString()} - {endDate.ToShortDateString()}:");
-            Console.WriteLine($"Кількість візитів: {visits.Count()}");
-            Console.WriteLine($"Загальний дохід: {totalIncome} грн");
-
-            var visitsByExhibition = visits
-                .GroupBy(v => v.ExhibitionId)
-                .Select(g => new {
-                    Exhibition = _unitOfWork.Exhibitions.GetById(g.Key),
-                    Count = g.Count(),
-                    Income = g.Sum(v => v.TicketPrice)
-                })
-                .OrderByDescending(x => x.Count);
-
-            Console.WriteLine("\nРозподіл по експозиціях:");
-            foreach (var item in visitsByExhibition)
+            try
             {
-                Console.WriteLine($"{item.Exhibition.Title}: {item.Count} візитів, {item.Income} грн");
+                var report = _reportService.GenerateVisitsReport(startDate, endDate);
+                Console.WriteLine($"\nЗвіт по візитам за період {report.StartDate.ToShortDateString()} - {report.EndDate.ToShortDateString()}:");
+                Console.WriteLine($"Кількість візитів: {report.TotalVisits}");
+                Console.WriteLine($"Загальний дохід: {report.TotalIncome} грн");
+
+                Console.WriteLine("\nРозподіл по експозиціях:");
+                foreach (var item in report.ExhibitionStats)
+                {
+                    Console.WriteLine($"{item.Exhibition.Title}: {item.VisitCount} візитів, {item.TotalIncome} грн");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Помилка: {ex.Message}");
             }
         }
+
         static void ShowToursIncomeReport()
         {
             Console.Write("\nВведіть початкову дату (рррр-мм-дд): ");
@@ -1023,33 +1114,23 @@ namespace Museum.ConsoleUI
                 Console.Write("Невірний формат дати або дата раніше початку. Спробуйте ще раз (рррр-мм-дд): ");
             }
 
-            // Жадібне завантаження даних про екскурсії з інформацією про експозиції
-            var tours = _unitOfWork.Tours.GetAll()
-                .Where(t => t.TourDate >= startDate && t.TourDate <= endDate)
-                .ToList();
-
-            var totalIncome = tours.Sum(t => t.Price);
-            var privateToursCount = tours.Count(t => t.IsPrivate);
-            var groupToursCount = tours.Count(t => !t.IsPrivate);
-
-            Console.WriteLine($"\nЗвіт по екскурсіях за період {startDate.ToShortDateString()} - {endDate.ToShortDateString()}:");
-            Console.WriteLine($"Загальний дохід: {totalIncome} грн");
-            Console.WriteLine($"Кількість приватних екскурсій: {privateToursCount}");
-            Console.WriteLine($"Кількість групових екскурсій: {groupToursCount}");
-
-            var toursByGuide = tours
-                .GroupBy(t => t.GuideName)
-                .Select(g => new {
-                    Guide = g.Key,
-                    Count = g.Count(),
-                    Income = g.Sum(t => t.Price)
-                })
-                .OrderByDescending(x => x.Income);
-
-            Console.WriteLine("\nРозподіл по гідах:");
-            foreach (var item in toursByGuide)
+            try
             {
-                Console.WriteLine($"{item.Guide}: {item.Count} екскурсій, {item.Income} грн доходу");
+                var report = _reportService.GenerateToursReport(startDate, endDate);
+                Console.WriteLine($"\nЗвіт по екскурсіях за період {report.StartDate.ToShortDateString()} - {report.EndDate.ToShortDateString()}:");
+                Console.WriteLine($"Загальний дохід: {report.TotalIncome} грн");
+                Console.WriteLine($"Кількість приватних екскурсій: {report.PrivateToursCount}");
+                Console.WriteLine($"Кількість групових екскурсій: {report.GroupToursCount}");
+
+                Console.WriteLine("\nРозподіл по гідах:");
+                foreach (var item in report.GuideStats)
+                {
+                    Console.WriteLine($"{item.GuideName}: {item.TourCount} екскурсій, {item.TotalIncome} грн доходу");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Помилка: {ex.Message}");
             }
         }
 
@@ -1069,154 +1150,31 @@ namespace Museum.ConsoleUI
                 Console.Write("Невірний формат дати або дата раніше початку. Спробуйте ще раз (рррр-мм-дд): ");
             }
 
-            // Ліниве завантаження даних
-            var visits = _unitOfWork.Visits.GetByDateRange(startDate, endDate);
-            var tours = _unitOfWork.Tours.GetAll()
-                .Where(t => t.TourDate >= startDate && t.TourDate <= endDate)
-                .ToList();
+            try
+            {
+                var report = _reportService.GeneratePopularExhibitionsReport(startDate, endDate);
+                Console.WriteLine($"\nРейтинг популярності експозицій за період {report.StartDate.ToShortDateString()} - {report.EndDate.ToShortDateString()}:");
+                Console.WriteLine("Місце\tНазва\t\tВізити\tЕкскурсії\tЗагальний бал");
 
-            var exhibitionsPopularity = _unitOfWork.Exhibitions.GetAll()
-                .Select(e => new
+                int place = 1;
+                foreach (var item in report.Exhibitions)
                 {
-                    Exhibition = e,
-                    VisitsCount = visits.Count(v => v.ExhibitionId == e.ExhibitionId),
-                    ToursCount = tours.Count(t => t.ExhibitionId == e.ExhibitionId)
-                })
-                .OrderByDescending(e => e.VisitsCount + e.ToursCount * 2); // Вага для екскурсій більша
-
-            Console.WriteLine($"\nРейтинг популярності експозицій за період {startDate.ToShortDateString()} - {endDate.ToShortDateString()}:");
-            Console.WriteLine("Місце\tНазва\t\tВізити\tЕкскурсії\tЗагальний бал");
-
-            int place = 1;
-            foreach (var item in exhibitionsPopularity)
-            {
-                var totalScore = item.VisitsCount + item.ToursCount * 2;
-                Console.WriteLine($"{place++}\t{item.Exhibition.Title}\t{item.VisitsCount}\t{item.ToursCount}\t\t{totalScore}");
+                    Console.WriteLine($"{place++}\t{item.Exhibition.Title}\t{item.VisitsCount}\t{item.ToursCount}\t\t{item.TotalScore}");
+                }
             }
-        }
-
-        #region Додаткові методи для роботи з візитами
-        static void PlanIndividualVisit()
-        {
-            Console.WriteLine("\nПланування індивідуального візиту");
-
-            ShowCurrentExhibitionsReport();
-
-            Console.Write("\nВведіть ID експозиції: ");
-            if (!int.TryParse(Console.ReadLine(), out int exhibitionId))
+            catch (Exception ex)
             {
-                Console.WriteLine("Невірний формат ID.");
-                return;
+                Console.WriteLine($"Помилка: {ex.Message}");
             }
-
-            var exhibition = _unitOfWork.Exhibitions.GetById(exhibitionId);
-            if (exhibition == null)
-            {
-                Console.WriteLine("Експозиція з таким ID не знайдена.");
-                return;
-            }
-
-            // Перевірка чи експозиція дійсно поточна
-            if (exhibition.StartDate > DateTime.Now || exhibition.EndDate < DateTime.Now)
-            {
-                Console.WriteLine("Ця експозиція не є активною на поточну дату.");
-                return;
-            }
-
-            Console.Write("Введіть дату візиту (рррр-мм-дд): ");
-            DateTime visitDate;
-            while (!DateTime.TryParse(Console.ReadLine(), out visitDate) || visitDate < DateTime.Today)
-            {
-                Console.Write("Невірний формат дати або дата в минулому. Спробуйте ще раз (рррр-мм-дд): ");
-            }
-
-            // Отримання доступних часових слотів
-            var availableSlots = _unitOfWork.Schedules.GetAvailableSchedules(visitDate)
-                .Where(s => s.ExhibitionId == exhibitionId)
-                .ToList();
-
-            if (!availableSlots.Any())
-            {
-                Console.WriteLine("На жаль, на обрану дату немає доступних часових слотів для цієї експозиції.");
-                return;
-            }
-
-            Console.WriteLine("\nДоступні часові слоти:");
-            for (int i = 0; i < availableSlots.Count; i++)
-            {
-                Console.WriteLine($"{i + 1}. {availableSlots[i].StartTime} - {availableSlots[i].EndTime}");
-            }
-
-            Console.Write("Оберіть номер слота: ");
-            if (!int.TryParse(Console.ReadLine(), out int slotNumber) || slotNumber < 1 || slotNumber > availableSlots.Count)
-            {
-                Console.WriteLine("Невірний вибір слота.");
-                return;
-            }
-
-            var selectedSlot = availableSlots[slotNumber - 1];
-
-            Console.Write("Ім'я відвідувача: ");
-            var visitorName = Console.ReadLine();
-
-            Console.Write("Кількість відвідувачів: ");
-            if (!int.TryParse(Console.ReadLine(), out int visitorsCount) || visitorsCount <= 0)
-            {
-                Console.WriteLine("Невірна кількість відвідувачів.");
-                return;
-            }
-
-            // Розрахунок вартості (можна додати більш складну логіку)
-            decimal basePrice = 50; // Базова ціна
-            decimal totalPrice = visitorsCount * basePrice;
-
-            // Запис візиту
-            var visit = new Visit
-            {
-                VisitorName = visitorName,
-                VisitDate = visitDate,
-                TicketPrice = totalPrice,
-                ExhibitionId = exhibitionId
-            };
-
-            _unitOfWork.Visits.Add(visit);
-            _unitOfWork.SaveChanges();
-
-            Console.WriteLine($"\nВізит успішно заплановано на {visitDate.ToShortDateString()} {selectedSlot.StartTime}-{selectedSlot.EndTime}");
-            Console.WriteLine($"Загальна вартість: {totalPrice} грн");
         }
         #endregion
 
         #region Додаткові методи для роботи з екскурсіями
-        static void PlanGroupTour()
+        private static void PlanGroupTour()
         {
             Console.WriteLine("\nПланування групової екскурсії");
-
-            ShowCurrentExhibitionsReport();
-
-            Console.Write("\nВведіть ID експозиції: ");
-            if (!int.TryParse(Console.ReadLine(), out int exhibitionId))
-            {
-                Console.WriteLine("Невірний формат ID.");
-                return;
-            }
-
-            var exhibition = _unitOfWork.Exhibitions.GetById(exhibitionId);
-            if (exhibition == null)
-            {
-                Console.WriteLine("Експозиція з таким ID не знайдена.");
-                return;
-            }
-
-            Console.Write("Введіть дату екскурсії (рррр-мм-дд): ");
-            DateTime tourDate;
-            while (!DateTime.TryParse(Console.ReadLine(), out tourDate) || tourDate < DateTime.Today)
-            {
-                Console.Write("Невірний формат дати або дата в минулому. Спробуйте ще раз (рррр-мм-дд): ");
-            }
-
-            Console.Write("Ім'я гіда: ");
-            var guideName = Console.ReadLine();
+            var model = GetCommonTourData();
+            if (model == null) return;
 
             Console.Write("Кількість учасників: ");
             if (!int.TryParse(Console.ReadLine(), out int participantsCount) || participantsCount <= 0)
@@ -1225,45 +1183,60 @@ namespace Museum.ConsoleUI
                 return;
             }
 
-            // Розрахунок вартості
-            decimal basePricePerPerson = 30;
-            decimal totalPrice = participantsCount * basePricePerPerson;
+            model.ParticipantsCount = participantsCount;
 
-            // Запис екскурсії
-            var tour = new Tour
+            try
             {
-                TourDate = tourDate,
-                GuideName = guideName,
-                IsPrivate = false,
-                Price = totalPrice,
-                ExhibitionId = exhibitionId
-            };
-
-            _unitOfWork.Tours.Add(tour);
-            _unitOfWork.SaveChanges();
-
-            Console.WriteLine($"\nГрупова екскурсія успішно запланована на {tourDate.ToShortDateString()}");
-            Console.WriteLine($"Загальна вартість: {totalPrice} грн");
+                _tourService.PlanGroupTour(model);
+                Console.WriteLine($"\nГрупова екскурсія успішно запланована на {model.TourDate.ToShortDateString()}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"\nПомилка: {ex.Message}");
+            }
         }
 
-        static void PlanPrivateTour()
+        private static void PlanPrivateTour()
         {
             Console.WriteLine("\nПланування приватної екскурсії");
+            var model = GetCommonTourData();
+            if (model == null) return;
 
+            Console.Write("Тривалість екскурсії (години): ");
+            if (!int.TryParse(Console.ReadLine(), out int duration) || duration <= 0)
+            {
+                Console.WriteLine("Невірна тривалість.");
+                return;
+            }
+
+            model.Duration = duration;
+
+            try
+            {
+                _tourService.PlanPrivateTour(model);
+                Console.WriteLine($"\nПриватна екскурсія успішно запланована на {model.TourDate.ToShortDateString()}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"\nПомилка: {ex.Message}");
+            }
+        }
+        private static TourCreationModel GetCommonTourData()
+        {
             ShowCurrentExhibitionsReport();
 
             Console.Write("\nВведіть ID експозиції: ");
             if (!int.TryParse(Console.ReadLine(), out int exhibitionId))
             {
                 Console.WriteLine("Невірний формат ID.");
-                return;
+                return null;
             }
 
-            var exhibition = _unitOfWork.Exhibitions.GetById(exhibitionId);
+            var exhibition = _exhibitionService.GetExhibition(exhibitionId);
             if (exhibition == null)
             {
                 Console.WriteLine("Експозиція з таким ID не знайдена.");
-                return;
+                return null;
             }
 
             Console.Write("Введіть дату екскурсії (рррр-мм-дд): ");
@@ -1276,35 +1249,15 @@ namespace Museum.ConsoleUI
             Console.Write("Ім'я гіда: ");
             var guideName = Console.ReadLine();
 
-            Console.Write("Тривалість екскурсії (години): ");
-            if (!int.TryParse(Console.ReadLine(), out int duration) || duration <= 0)
+            return new TourCreationModel
             {
-                Console.WriteLine("Невірна тривалість.");
-                return;
-            }
-
-            // Розрахунок вартості
-            decimal basePricePerHour = 200;
-            decimal totalPrice = duration * basePricePerHour;
-
-            // Запис екскурсії
-            var tour = new Tour
-            {
+                ExhibitionId = exhibitionId,
                 TourDate = tourDate,
-                GuideName = guideName,
-                IsPrivate = true,
-                Price = totalPrice,
-                ExhibitionId = exhibitionId
+                GuideName = guideName
             };
-
-            _unitOfWork.Tours.Add(tour);
-            _unitOfWork.SaveChanges();
-
-            Console.WriteLine($"\nПриватна екскурсія успішно запланована на {tourDate.ToShortDateString()}");
-            Console.WriteLine($"Загальна вартість: {totalPrice} грн");
+            #endregion
         }
-        #endregion
     }
 }
-#endregion
+
 

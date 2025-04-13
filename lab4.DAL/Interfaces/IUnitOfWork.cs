@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Museum.DAL.Interfaces
+﻿namespace Museum.DAL.Interfaces
 {
     public interface IUnitOfWork : IDisposable
     {

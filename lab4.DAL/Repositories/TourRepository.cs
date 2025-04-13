@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Museum.DAL.Context;
 using Museum.DAL.Entities;
 using Museum.DAL.Interfaces;

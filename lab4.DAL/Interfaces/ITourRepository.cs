@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Museum.DAL.Entities;
+﻿using Museum.DAL.Entities;
 
 namespace Museum.DAL.Interfaces
 {
