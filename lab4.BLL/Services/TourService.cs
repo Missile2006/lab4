@@ -16,6 +16,8 @@ namespace Museum.BLL.Services
             _unitOfWork = unitOfWork;
             _tourPlanner = new TourPlanner(new GroupTourPricingStrategy());
         }
+
+        // Методи для планування турів
         public void PlanGroupTour(TourCreationModel model)
         {
             _tourPlanner.SetPricingStrategy(new GroupTourPricingStrategy());
@@ -31,37 +33,27 @@ namespace Museum.BLL.Services
         private void CreateAndSaveTour(TourCreationModel model)
         {
             var tour = _tourPlanner.CreateTour(model);
-            _unitOfWork.Tours.Add(tour);
-            _unitOfWork.SaveChanges();
+            AddTour(tour);
         }
 
-        // Додати екскурсію
+        // CRUD операції
         public void AddTour(Tour tour)
         {
-            if (tour == null)
-                throw new ArgumentNullException(nameof(tour), "Екскурсія не може бути null");
-
-            if (string.IsNullOrWhiteSpace(tour.GuideName))
-                throw new ArgumentException("Ім’я гіда не може бути порожнім");
-
-            if (tour.TourDate < DateTime.Today)
-                throw new ArgumentException("Дата екскурсії не може бути в минулому");
-
-            if (tour.Price <= 0)
-                throw new ArgumentException("Ціна повинна бути додатною");
-
-            var exhibition = _unitOfWork.Exhibitions.GetById(tour.ExhibitionId);
-            if (exhibition == null)
-                throw new KeyNotFoundException("Експозицію не знайдено");
-
+            ValidateTour(tour);
             _unitOfWork.Tours.Add(tour);
             _unitOfWork.SaveChanges();
         }
 
-        // Видалити екскурсію
+        public void UpdateTour(Tour tour)
+        {
+            ValidateTour(tour);
+            _unitOfWork.Tours.Update(tour);
+            _unitOfWork.SaveChanges();
+        }
+
         public void DeleteTour(int id)
         {
-            var tour = _unitOfWork.Tours.GetById(id);
+            var tour = GetTour(id, true); // Жадібне завантаження для перевірки залежностей
             if (tour == null)
                 throw new KeyNotFoundException("Екскурсію не знайдено");
 
@@ -69,53 +61,98 @@ namespace Museum.BLL.Services
             _unitOfWork.SaveChanges();
         }
 
-        // Отримати екскурсію за ID
-        public Tour GetTour(int id)
+        // Методи для отримання даних з різними типами завантаження
+        public Tour GetTour(int id, bool eagerLoading = false)
         {
-            return _unitOfWork.Tours.GetById(id);
+            return eagerLoading
+                ? _unitOfWork.Tours.GetByIdWithExhibition(id)
+                : _unitOfWork.Tours.GetById(id);
         }
 
-        // Отримати всі екскурсії
-        public IEnumerable<Tour> GetAllTours()
+        public Tour GetTourWithExhibition(int id)
         {
-            return _unitOfWork.Tours.GetAll();
+            return _unitOfWork.Tours.GetByIdWithExhibition(id);
         }
 
-        // Отримати всі екскурсії певної експозиції
-        public IEnumerable<Tour> GetExhibitionTours(int exhibitionId)
+        public IEnumerable<Tour> GetAllToursWithExhibitions()
         {
-            return _unitOfWork.Tours.GetByExhibitionId(exhibitionId);
+            return _unitOfWork.Tours.GetAllWithExhibitions();
         }
 
-        // Отримати всі приватні екскурсії
-        public IEnumerable<Tour> GetPrivateTours()
+        public IEnumerable<Tour> GetAllTours(bool includeExhibitions = false)
         {
-            return _unitOfWork.Tours.GetPrivateTours();
+            return includeExhibitions
+                ? _unitOfWork.Tours.GetAllWithExhibitions()
+                : _unitOfWork.Tours.GetAll();
         }
 
-        // Отримати всі заплановані екскурсії
-        public IEnumerable<Tour> GetScheduledTours()
+        // Спеціалізовані методи
+        public IEnumerable<Tour> GetExhibitionTours(int exhibitionId, bool eagerLoading = false)
         {
-            return _unitOfWork.Tours.GetScheduledTours();
+            return eagerLoading
+                ? _unitOfWork.Tours.GetByExhibitionIdWithExhibition(exhibitionId)
+                : _unitOfWork.Tours.GetByExhibitionId(exhibitionId);
         }
 
-        // Пошук екскурсій за ім’ям гіда
-        public IEnumerable<Tour> SearchToursByGuide(string guideName)
+        public IEnumerable<Tour> GetPrivateTours(bool eagerLoading = false)
+        {
+            var tours = _unitOfWork.Tours.GetPrivateTours();
+            return eagerLoading
+                ? IncludeExhibitions(tours)
+                : tours;
+        }
+
+        public IEnumerable<Tour> GetScheduledTours(bool eagerLoading = false)
+        {
+            var tours = _unitOfWork.Tours.GetScheduledTours();
+            return eagerLoading
+                ? IncludeExhibitions(tours)
+                : tours;
+        }
+
+        public IEnumerable<Tour> SearchToursByGuide(string guideName, bool eagerLoading = false)
         {
             if (string.IsNullOrWhiteSpace(guideName))
                 return Enumerable.Empty<Tour>();
 
-            return _unitOfWork.Tours.GetByGuideName(guideName);
+            var tours = _unitOfWork.Tours.GetByGuideName(guideName);
+            return eagerLoading
+                ? IncludeExhibitions(tours)
+                : tours;
         }
 
-        // Порахувати прибуток від екскурсій за вказаний період
         public decimal CalculateTourIncome(DateTime startDate, DateTime endDate)
         {
-            var tours = _unitOfWork.Tours.GetAll()
+            return _unitOfWork.Tours.GetAll()
                 .Where(t => t.TourDate >= startDate && t.TourDate <= endDate)
-                .ToList();
+                .Sum(t => t.Price);
+        }
 
-            return tours.Sum(t => t.Price);
+        // Допоміжні методи
+        private IEnumerable<Tour> IncludeExhibitions(IEnumerable<Tour> tours)
+        {
+            // Жадібне завантаження для існуючої колекції
+            var tourIds = tours.Select(t => t.TourId).ToList();
+            return _unitOfWork.Tours.GetAllWithExhibitions()
+                .Where(t => tourIds.Contains(t.TourId));
+        }
+
+        private void ValidateTour(Tour tour)
+        {
+            if (tour == null)
+                throw new ArgumentNullException(nameof(tour), "Екскурсія не може бути null");
+
+            if (string.IsNullOrWhiteSpace(tour.GuideName))
+                throw new ArgumentException("Ім'я гіда не може бути порожнім");
+
+            if (tour.TourDate < DateTime.Today)
+                throw new ArgumentException("Дата екскурсії не може бути в минулому");
+
+            if (tour.Price <= 0)
+                throw new ArgumentException("Ціна повинна бути додатною");
+
+            if (_unitOfWork.Exhibitions.GetById(tour.ExhibitionId) == null)
+                throw new KeyNotFoundException("Експозицію не знайдено");
         }
     }
 }

@@ -5,6 +5,7 @@ using Museum.DAL.Repositories;
 using Museum.DAL.Entities;
 using Museum.BLL.Services;
 using Museum.BLL.Strategies.Models;
+using System.Diagnostics;
 
 namespace Museum.ConsoleUI
 {
@@ -770,41 +771,65 @@ namespace Museum.ConsoleUI
             {
                 Console.Clear();
                 Console.WriteLine("=== Управління екскурсіями ===");
-                Console.WriteLine("1. Переглянути всі екскурсії");
-                Console.WriteLine("2. Додати нову екскурсію");
-                Console.WriteLine("3. Скасувати екскурсію");
-                Console.WriteLine("4. Переглянути екскурсії експозиції");
-                Console.WriteLine("5. Переглянути приватні екскурсії");
-                Console.WriteLine("6. Переглянути заплановані екскурсії");
-                Console.WriteLine("7. Пошук екскурсій за ім'ям гіда");
-                Console.WriteLine("8. Повернутися до головного меню");
+                Console.WriteLine("1. Переглянути всі екскурсії (ліниво)");
+                Console.WriteLine("2. Переглянути всі екскурсії (жадібно)");
+                Console.WriteLine("3. Додати нову екскурсію");
+                Console.WriteLine("4. Скасувати екскурсію");
+                Console.WriteLine("5. Переглянути екскурсії експозиції");
+                Console.WriteLine("6. Переглянути приватні екскурсії");
+                Console.WriteLine("7. Переглянути заплановані екскурсії");
+                Console.WriteLine("8. Пошук екскурсій за ім'ям гіда");
+                Console.WriteLine("9. Деталі туру (ліниво)");
+                Console.WriteLine("10. Деталі туру (жадібно)");
+                Console.WriteLine("11. Порівняння підходів завантаження");
+                Console.WriteLine("12. Повернутися до головного меню");
                 Console.Write("Оберіть опцію: ");
 
                 var choice = Console.ReadLine();
                 switch (choice)
                 {
                     case "1":
-                        ShowAllTours();
+                        ShowAllTours(false); // Лінивий підхід
                         break;
                     case "2":
-                        AddTour();
+                        ShowAllTours(true); // Жадібний підхід
                         break;
                     case "3":
-                        DeleteTour();
+                        AddTour();
                         break;
                     case "4":
-                        ShowExhibitionTours();
+                        DeleteTour();
                         break;
                     case "5":
-                        ShowPrivateTours();
+                        ShowExhibitionTours();
                         break;
                     case "6":
-                        ShowScheduledTours();
+                        ShowPrivateTours();
                         break;
                     case "7":
-                        SearchToursByGuide();
+                        ShowScheduledTours();
                         break;
                     case "8":
+                        SearchToursByGuide();
+                        break;
+                    case "9":
+                        Console.Write("Введіть ID туру для деталей (ліниво): ");
+                        if (int.TryParse(Console.ReadLine(), out int lazyId))
+                            ShowTourDetails(lazyId, false);
+                        else
+                            Console.WriteLine("Невірний формат ID");
+                        break;
+                    case "10":
+                        Console.Write("Введіть ID туру для деталей (жадібно): ");
+                        if (int.TryParse(Console.ReadLine(), out int eagerId))
+                            ShowTourDetails(eagerId, true);
+                        else
+                            Console.WriteLine("Невірний формат ID");
+                        break;
+                    case "11":
+                        ShowLoadingApproachesComparison();
+                        break;
+                    case "12":
                         return;
                     default:
                         Console.WriteLine("Невірний вибір. Спробуйте ще раз.");
@@ -814,6 +839,108 @@ namespace Museum.ConsoleUI
                 Console.WriteLine("\nНатисніть будь-яку клавішу для продовження...");
                 Console.ReadKey();
             }
+        }
+
+        static void ShowAllTours(bool eagerLoading)
+        {
+            Console.WriteLine("\n=== Список всіх екскурсій ===");
+            Console.WriteLine("Завантаження: " + (eagerLoading ? "Жадібне" : "Ліниве"));
+
+            IEnumerable<Tour> tours;
+            if (eagerLoading)
+                tours = _tourService.GetAllToursWithExhibitions();
+            else
+                tours = _tourService.GetAllTours();
+
+            Console.WriteLine("ID\tДата\t\tГід\t\tТип\tЦіна\t" + (eagerLoading ? "Експозиція" : ""));
+
+            foreach (var t in tours)
+            {
+                var tourType = t.IsPrivate ? "Приватна" : "Групова";
+                Console.Write($"{t.TourId}\t{t.TourDate.ToShortDateString()}\t{t.GuideName}\t{tourType}\t{t.Price}");
+
+                if (eagerLoading)
+                    Console.WriteLine($"\t{t.Exhibition?.Title}");
+                else
+                    Console.WriteLine();
+            }
+        }
+
+        static void ShowTourDetails(int tourId, bool eagerLoading)
+        {
+            Console.WriteLine("\n=== Деталі туру ===");
+            Console.WriteLine("Завантаження: " + (eagerLoading ? "Жадібне" : "Ліниве"));
+
+            Tour tour;
+            if (eagerLoading)
+                tour = _tourService.GetTourWithExhibition(tourId);
+            else
+                tour = _tourService.GetTour(tourId);
+
+            if (tour == null)
+            {
+                Console.WriteLine("Тур з вказаним ID не знайдено");
+                return;
+            }
+
+            Console.WriteLine($"ID: {tour.TourId}");
+            Console.WriteLine($"Гід: {tour.GuideName}");
+            Console.WriteLine($"Дата: {tour.TourDate.ToShortDateString()}");
+            Console.WriteLine($"Тип: {(tour.IsPrivate ? "Приватна" : "Групова")}");
+            Console.WriteLine($"Ціна: {tour.Price} грн");
+
+            if (eagerLoading)
+            {
+                Console.WriteLine($"Експозиція: {tour.Exhibition?.Title ?? "Невідомо"}");
+                Console.WriteLine($"Тема: {tour.Exhibition?.Theme ?? "Невідомо"}");
+            }
+            else
+            {
+                // Ліниве завантаження - можна додатково завантажити дані
+                Console.WriteLine("\nДля перегляду деталей експозиції використовуйте жадібне завантаження");
+            }
+        }
+
+        static void ShowLoadingApproachesComparison()
+        {
+            Console.WriteLine("\n=== Порівняння підходів завантаження ===");
+
+            // Тестування для списків
+            Console.WriteLine("\nТестування для списків (10 записів):");
+
+            var sw = Stopwatch.StartNew();
+            var lazyTours = _tourService.GetAllTours().Take(10).ToList();
+            sw.Stop();
+            Console.WriteLine($"Ліниве завантаження: {sw.ElapsedMilliseconds}ms");
+
+            sw.Restart();
+            var eagerTours = _tourService.GetAllToursWithExhibitions().Take(10).ToList();
+            sw.Stop();
+            Console.WriteLine($"Жадібне завантаження: {sw.ElapsedMilliseconds}ms");
+
+            // Тестування для одиночних записів
+            Console.WriteLine("\nТестування для одиночних записів:");
+
+            sw.Restart();
+            var lazyTour = _tourService.GetTour(1);
+            Console.WriteLine($"Ліниве завантаження (1 запит): {sw.ElapsedMilliseconds}ms");
+
+            // Додатковий запит при доступі до зв'язаних даних
+            sw.Restart();
+            var exhibitionTitle = _exhibitionService.GetExhibition(lazyTour.ExhibitionId)?.Title;
+            sw.Stop();
+            Console.WriteLine($" + Додатковий запит для виставки: {sw.ElapsedMilliseconds}ms");
+
+            sw.Restart();
+            var eagerTour = _tourService.GetTourWithExhibition(1);
+            sw.Stop();
+            Console.WriteLine($"Жадібне завантаження (1 запит): {sw.ElapsedMilliseconds}ms");
+
+            // Висновки
+            Console.WriteLine("\nВисновки:");
+            Console.WriteLine("- Ліниве завантаження краще для списків без деталей");
+            Console.WriteLine("- Жадібне завантаження ефективніше при роботі з пов'язаними даними");
+            Console.WriteLine("- Проблема N+1 виникає при лінивому завантаженні в циклах");
         }
 
         static void ShowAllTours()
@@ -1170,7 +1297,7 @@ namespace Museum.ConsoleUI
         #endregion
 
         #region Додаткові методи для роботи з екскурсіями
-        private static void PlanGroupTour()
+        static void PlanGroupTour()
         {
             Console.WriteLine("\nПланування групової екскурсії");
             var model = GetCommonTourData();
@@ -1196,7 +1323,7 @@ namespace Museum.ConsoleUI
             }
         }
 
-        private static void PlanPrivateTour()
+        static void PlanPrivateTour()
         {
             Console.WriteLine("\nПланування приватної екскурсії");
             var model = GetCommonTourData();
@@ -1221,7 +1348,7 @@ namespace Museum.ConsoleUI
                 Console.WriteLine($"\nПомилка: {ex.Message}");
             }
         }
-        private static TourCreationModel GetCommonTourData()
+        static TourCreationModel GetCommonTourData()
         {
             ShowCurrentExhibitionsReport();
 

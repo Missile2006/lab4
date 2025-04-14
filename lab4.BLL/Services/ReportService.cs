@@ -25,6 +25,7 @@ namespace Museum.BLL.Services
             if (startDate > endDate)
                 throw new ArgumentException("Дата завершення має бути пізніше за дату початку");
 
+            // Ліниве завантаження візитів - запит виконується лише при ітерації
             var visits = _unitOfWork.Visits.GetByDateRange(startDate, endDate);
             var totalIncome = visits.Sum(v => v.TicketPrice);
 
@@ -54,6 +55,7 @@ namespace Museum.BLL.Services
             if (startDate > endDate)
                 throw new ArgumentException("Дата завершення має бути пізніше за дату початку");
 
+            // Жадібне завантаження екскурсій - всі дані завантажуються одразу
             var tours = _unitOfWork.Tours.GetAll()
                 .Where(t => t.TourDate >= startDate && t.TourDate <= endDate)
                 .ToList();
