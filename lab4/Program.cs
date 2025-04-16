@@ -6,6 +6,8 @@ using Museum.DAL.Entities;
 using Museum.BLL.Services;
 using Museum.BLL.Strategies.Models;
 using System.Diagnostics;
+using System.Globalization;
+
 
 namespace Museum.ConsoleUI
 {
@@ -70,10 +72,12 @@ namespace Museum.ConsoleUI
         static void InitializeDatabase()
         {
             var options = new DbContextOptionsBuilder<MuseumContext>()
-                .UseInMemoryDatabase(databaseName: "MuseumDB")
+                .UseSqlite("Data Source=Museum.bd")
                 .Options;
 
             var context = new MuseumContext(options);
+            context.Database.EnsureCreated();
+            context.SaveChanges();
             var unitOfWork = new UnitOfWork(context);
 
             _exhibitionService = new ExhibitionService(unitOfWork);
@@ -654,12 +658,16 @@ namespace Museum.ConsoleUI
 
                 Console.Write("Ім'я відвідувача: ");
                 var name = Console.ReadLine();
-                Console.Write("Дата візиту (рррр-мм-дд): ");
 
+                Console.Write("Дата візиту (рррр-мм-дд): ");
                 DateTime visitDate;
-                while (!DateTime.TryParse(Console.ReadLine(), out visitDate) || visitDate < DateTime.Today)
+                while (!DateTime.TryParseExact(Console.ReadLine(),
+                       "yyyy-MM-dd",
+                       CultureInfo.InvariantCulture,
+                       DateTimeStyles.None,
+                       out visitDate) || visitDate < DateTime.Today)
                 {
-                    Console.Write("Невірний формат дати або дата в минулому. Спробуйте ще раз (рррр-мм-дд): ");
+                    Console.Write("Невірний формат (очікується рррр-мм-дд) або дата в минулому. Спробуйте ще раз: ");
                 }
 
                 Console.Write("Ціна квитка: ");
