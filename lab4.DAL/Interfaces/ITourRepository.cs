@@ -1,17 +1,10 @@
 ﻿using Museum.DAL.Entities;
+using Museum.DAL.Repositories;
 
 namespace Museum.DAL.Interfaces
 {
-    public interface ITourRepository
+    public interface ITourRepository : IGenericRepository<Tour>
     {
-        // Базові CRUD операції
-        Tour GetById(int id);
-        IEnumerable<Tour> GetAll();
-        void Add(Tour tour);
-        void Update(Tour tour);
-        void Delete(int id);
-
-        // Спеціалізовані методи (ліниве завантаження)
         IEnumerable<Tour> GetByExhibitionId(int exhibitionId);
         IEnumerable<Tour> GetByGuideName(string guideName);
         IEnumerable<Tour> GetPrivateTours();

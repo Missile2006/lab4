@@ -1,16 +1,11 @@
 ﻿using Museum.DAL.Entities;
+using Museum.DAL.Repositories;
 
 namespace Museum.DAL.Interfaces
 {
-    public interface IScheduleRepository
+    public interface IScheduleRepository : IGenericRepository<Schedule>
     {
-        Schedule GetById(int id);
-        IEnumerable<Schedule> GetAll();
         IEnumerable<Schedule> GetByExhibitionId(int exhibitionId);
         IEnumerable<Schedule> GetAvailableSchedules(DateTime date);
-
-        void Add(Schedule schedule);
-        void Update(Schedule schedule);
-        void Delete(int id);
     }
 }

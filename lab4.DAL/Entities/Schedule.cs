@@ -1,5 +1,4 @@
-﻿using System;
-
+﻿
 namespace Museum.DAL.Entities
 {
     public class Schedule

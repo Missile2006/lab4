@@ -1,17 +1,12 @@
 ﻿using Museum.DAL.Entities;
+using Museum.DAL.Repositories;
 
 namespace Museum.DAL.Interfaces
 {
-    public interface IVisitRepository
+    public interface IVisitRepository : IGenericRepository<Visit>
     {
-        Visit GetById(int id);
-        IEnumerable<Visit> GetAll();
         IEnumerable<Visit> GetByExhibitionId(int exhibitionId);
         IEnumerable<Visit> GetByVisitorName(string visitorName);
         IEnumerable<Visit> GetByDateRange(DateTime startDate, DateTime endDate);
-
-        void Add(Visit visit);
-        void Update(Visit visit);
-        void Delete(int id);
     }
 }

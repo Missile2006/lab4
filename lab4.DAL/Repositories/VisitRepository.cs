@@ -1,28 +1,15 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Museum.DAL.Context;
 using Museum.DAL.Entities;
 using Museum.DAL.Interfaces;
 
 namespace Museum.DAL.Repositories
 {
-    public class VisitRepository : IVisitRepository
+    public class VisitRepository : GenericRepository<Visit>, IVisitRepository
     {
-        private readonly MuseumContext _context;
-
-        public VisitRepository(MuseumContext context)
-        {
-            _context = context;
-        }
-
-        public Visit GetById(int id)
-        {
-            return _context.Visits.Find(id);
-        }
-
-        public IEnumerable<Visit> GetAll()
-        {
-            return _context.Visits.ToList();
-        }
+        public VisitRepository(MuseumContext context) : base(context) { }
 
         public IEnumerable<Visit> GetByExhibitionId(int exhibitionId)
         {
@@ -43,25 +30,6 @@ namespace Museum.DAL.Repositories
             return _context.Visits
                 .Where(v => v.VisitDate >= startDate && v.VisitDate <= endDate)
                 .ToList();
-        }
-
-        public void Add(Visit visit)
-        {
-            _context.Visits.Add(visit);
-        }
-
-        public void Update(Visit visit)
-        {
-            _context.Entry(visit).State = EntityState.Modified;
-        }
-
-        public void Delete(int id)
-        {
-            var visit = _context.Visits.Find(id);
-            if (visit != null)
-            {
-                _context.Visits.Remove(visit);
-            }
         }
     }
 }

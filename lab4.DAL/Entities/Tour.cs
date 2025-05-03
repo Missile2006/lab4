@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Museum.DAL.Entities
+﻿namespace Museum.DAL.Entities
 {
     public class Tour
     {
