@@ -21,6 +21,7 @@ namespace Museum.DAL.Repositories
         {
             return _context.Schedules
                 .Where(s => s.Date == date.Date)
+                .AsEnumerable()
                 .OrderBy(s => s.StartTime)
                 .ToList();
         }

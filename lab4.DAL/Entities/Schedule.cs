@@ -9,6 +9,7 @@ namespace Museum.DAL.Entities
         public TimeSpan EndTime { get; set; }
 
         public int ExhibitionId { get; set; }
+        public int StartTimeMinutes => (int)StartTime.TotalMinutes;
         public virtual Exhibition Exhibition { get; set; }
     }
 }

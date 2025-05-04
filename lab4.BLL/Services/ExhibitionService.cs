@@ -1,92 +1,120 @@
-﻿using Museum.DAL.Entities;
+﻿using AutoMapper;
+using Museum.DAL.Entities;
 using Museum.DAL.Interfaces;
+using Museum.BLL.Models;
+using Museum.BLL.DTO;
+using Museum.DAL.UoW;
 
 namespace Museum.BLL.Services
 {
     public class ExhibitionService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
 
-        public ExhibitionService(IUnitOfWork unitOfWork)
+        public ExhibitionService(IUnitOfWork unitOfWork, IMapper mapper)
         {
             _unitOfWork = unitOfWork;
+            _mapper = mapper;
         }
 
-        public void AddExhibition(Exhibition exhibition)
-        {
-            if (exhibition == null)
-                throw new ArgumentNullException(nameof(exhibition), "Експозиція не може бути null");
 
-            if (string.IsNullOrWhiteSpace(exhibition.Title))
+
+        // Додати експозицію
+        public void AddExhibition(ExhibitionModel exhibitionModel)
+        {
+            if (exhibitionModel == null)
+                throw new ArgumentNullException(nameof(exhibitionModel), "Експозиція не може бути null");
+
+            if (string.IsNullOrWhiteSpace(exhibitionModel.Title))
                 throw new ArgumentException("Назва не може бути порожньою");
 
-            if (exhibition.StartDate >= exhibition.EndDate)
+            if (exhibitionModel.StartDate >= exhibitionModel.EndDate)
                 throw new ArgumentException("Дата завершення має бути пізніше за дату початку");
 
+            var exhibition = _mapper.Map<Exhibition>(exhibitionModel);
             _unitOfWork.Exhibitions.Add(exhibition);
             _unitOfWork.SaveChanges();
         }
 
-        public void UpdateExhibition(Exhibition exhibition)
+        // Оновити експозицію
+        public void UpdateExhibition(ExhibitionModel exhibitionModel)
         {
-            if (exhibition == null)
-                throw new ArgumentNullException(nameof(exhibition), "Експозиція не може бути null");
+            if (exhibitionModel == null)
+                throw new ArgumentNullException(nameof(exhibitionModel));
 
-            var existingExhibition = _unitOfWork.Exhibitions.GetById(exhibition.ExhibitionId);
+            var existingExhibition = _unitOfWork.Exhibitions.GetById(exhibitionModel.ExhibitionId);
             if (existingExhibition == null)
-                throw new KeyNotFoundException("Експозицію не знайдено");
+                throw new KeyNotFoundException("Експозиція не знайдена");
 
-            _unitOfWork.Exhibitions.Update(exhibition);
+            // Оновлюємо властивості
+            existingExhibition.Title = exhibitionModel.Title;
+            existingExhibition.Theme = exhibitionModel.Theme;
+            existingExhibition.TargetAudience = exhibitionModel.TargetAudience;
+            existingExhibition.StartDate = exhibitionModel.StartDate;
+            existingExhibition.EndDate = exhibitionModel.EndDate;
+
+            _unitOfWork.Exhibitions.Update(existingExhibition);
             _unitOfWork.SaveChanges();
         }
 
+        // Видалити експозицію
         public void DeleteExhibition(int id)
         {
             var exhibition = _unitOfWork.Exhibitions.GetById(id);
             if (exhibition == null)
                 throw new KeyNotFoundException("Експозицію не знайдено");
 
-            // Перевірка наявності пов’язаних даних
             bool hasRelatedData = _unitOfWork.Schedules.GetByExhibitionId(id).Any() ||
                                   _unitOfWork.Visits.GetByExhibitionId(id).Any() ||
                                   _unitOfWork.Tours.GetByExhibitionId(id).Any();
 
             if (hasRelatedData)
-                throw new InvalidOperationException("Неможливо видалити експозицію, оскільки існують пов’язані розклади, візити або екскурсії");
+                throw new InvalidOperationException("Неможливо видалити експозицію, оскільки існують пов’язані дані");
 
             _unitOfWork.Exhibitions.Delete(id);
             _unitOfWork.SaveChanges();
         }
 
-        public Exhibition GetExhibition(int id)
+        // Отримати експозицію за id
+        public ExhibitionModel GetExhibition(int id)
         {
-            return _unitOfWork.Exhibitions.GetById(id);
+            var exhibition = _unitOfWork.Exhibitions.GetById(id);
+            return _mapper.Map<ExhibitionModel>(exhibition);
         }
 
-        public IEnumerable<Exhibition> GetAllExhibitions()
+        // Отримати всі експозиції
+        public IEnumerable<ExhibitionModel> GetAllExhibitions()
         {
-            return _unitOfWork.Exhibitions.GetAll();
+            var exhibitions = _unitOfWork.Exhibitions.GetAll();
+            return _mapper.Map<IEnumerable<ExhibitionModel>>(exhibitions);
         }
 
-        public IEnumerable<Exhibition> GetCurrentExhibitions()
+        // Отримати поточні експозиції
+        public IEnumerable<ExhibitionModel> GetCurrentExhibitions()
         {
-            return _unitOfWork.Exhibitions.GetCurrentExhibitions(DateTime.Now);
+            var exhibitions = _unitOfWork.Exhibitions.GetCurrentExhibitions(DateTime.Now);
+            return _mapper.Map<IEnumerable<ExhibitionModel>>(exhibitions);
         }
 
-        public IEnumerable<Exhibition> SearchExhibitionsByTheme(string theme)
+        // Пошук експозицій за тематикою
+        public IEnumerable<ExhibitionModel> SearchExhibitionsByTheme(string theme)
         {
             if (string.IsNullOrWhiteSpace(theme))
-                return Enumerable.Empty<Exhibition>();
+                return Enumerable.Empty<ExhibitionModel>();
 
-            return _unitOfWork.Exhibitions.GetByTheme(theme);
+            var exhibitions = _unitOfWork.Exhibitions.GetByTheme(theme);
+            return _mapper.Map<IEnumerable<ExhibitionModel>>(exhibitions);
         }
 
-        public IEnumerable<Exhibition> SearchExhibitionsByAudience(string audience)
+        // Пошук експозицій за аудиторією
+        public IEnumerable<ExhibitionModel> SearchExhibitionsByAudience(string audience)
         {
             if (string.IsNullOrWhiteSpace(audience))
-                return Enumerable.Empty<Exhibition>();
+                return Enumerable.Empty<ExhibitionModel>();
 
-            return _unitOfWork.Exhibitions.GetByTargetAudience(audience);
+            var exhibitions = _unitOfWork.Exhibitions.GetByTargetAudience(audience);
+            return _mapper.Map<IEnumerable<ExhibitionModel>>(exhibitions);
         }
     }
 }

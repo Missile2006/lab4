@@ -1,35 +1,42 @@
-﻿using Museum.DAL.Entities;
+﻿using AutoMapper;
+using Museum.BLL.Models;
+using Museum.DAL.Entities;
 using Museum.DAL.Interfaces;
+using Museum.DAL.UoW;
 
 namespace Museum.BLL.Services
 {
     public class VisitService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
 
-        public VisitService(IUnitOfWork unitOfWork)
+        public VisitService(IUnitOfWork unitOfWork, IMapper mapper)
         {
             _unitOfWork = unitOfWork;
+            _mapper = mapper;
         }
 
-        public void AddVisit(Visit visit)
+        // CRUD операції
+        public void AddVisit(VisitModel model)
         {
-            if (visit == null)
-                throw new ArgumentNullException(nameof(visit));
+            if (model == null)
+                throw new ArgumentNullException(nameof(model));
 
-            if (string.IsNullOrWhiteSpace(visit.VisitorName))
+            if (string.IsNullOrWhiteSpace(model.VisitorName))
                 throw new ArgumentException("Ім'я відвідувача не може бути порожнім");
 
-            if (visit.VisitDate < DateTime.Today)
+            if (model.VisitDate < DateTime.Today)
                 throw new ArgumentException("Дата відвідування не може бути в минулому");
 
-            if (visit.TicketPrice <= 0)
+            if (model.TicketPrice <= 0)
                 throw new ArgumentException("Ціна квитка повинна бути позитивною");
 
-            var exhibition = _unitOfWork.Exhibitions.GetById(visit.ExhibitionId);
+            var exhibition = _unitOfWork.Exhibitions.GetById(model.ExhibitionId);
             if (exhibition == null)
                 throw new KeyNotFoundException("Виставку не знайдено");
 
+            var visit = _mapper.Map<Visit>(model);
             _unitOfWork.Visits.Add(visit);
             _unitOfWork.SaveChanges();
         }
@@ -44,30 +51,34 @@ namespace Museum.BLL.Services
             _unitOfWork.SaveChanges();
         }
 
-        public Visit GetVisit(int id)
+        public VisitModel GetVisit(int id)
         {
-            return _unitOfWork.Visits.GetById(id);
+            var visit = _unitOfWork.Visits.GetById(id);
+            return _mapper.Map<VisitModel>(visit);
         }
 
-        public IEnumerable<Visit> GetAllVisits()
+        public IEnumerable<VisitModel> GetAllVisits()
         {
-            return _unitOfWork.Visits.GetAll();
+            var visits = _unitOfWork.Visits.GetAll();
+            return _mapper.Map<IEnumerable<VisitModel>>(visits);
         }
 
-        public IEnumerable<Visit> SearchVisitsByName(string visitorName)
+        public IEnumerable<VisitModel> SearchVisitsByName(string visitorName)
         {
             if (string.IsNullOrWhiteSpace(visitorName))
-                return Enumerable.Empty<Visit>();
+                return Enumerable.Empty<VisitModel>();
 
-            return _unitOfWork.Visits.GetByVisitorName(visitorName);
+            var visits = _unitOfWork.Visits.GetByVisitorName(visitorName);
+            return _mapper.Map<IEnumerable<VisitModel>>(visits);
         }
 
-        public IEnumerable<Visit> SearchVisitsByDateRange(DateTime startDate, DateTime endDate)
+        public IEnumerable<VisitModel> SearchVisitsByDateRange(DateTime startDate, DateTime endDate)
         {
             if (startDate > endDate)
                 throw new ArgumentException("Дата закінчення повинна бути після дати початку");
 
-            return _unitOfWork.Visits.GetByDateRange(startDate, endDate);
+            var visits = _unitOfWork.Visits.GetByDateRange(startDate, endDate);
+            return _mapper.Map<IEnumerable<VisitModel>>(visits);
         }
 
         public decimal CalculateTotalIncome(DateTime startDate, DateTime endDate)

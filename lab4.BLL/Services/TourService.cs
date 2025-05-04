@@ -1,51 +1,70 @@
-﻿using Museum.BLL.Strategies;
-using Museum.BLL.Strategies.Models;
-using Museum.BLL.Strategies.Pricing;
+﻿using AutoMapper;
+using Museum.BLL.Models;
 using Museum.DAL.Entities;
 using Museum.DAL.Interfaces;
+using Museum.BLL.Strategies;
+using Museum.BLL.Strategies.Pricing;
+using Museum.BLL.Strategies.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Museum.DAL.UoW;
 
 namespace Museum.BLL.Services
 {
     public class TourService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
         private readonly TourPlanner _tourPlanner;
 
-        public TourService(IUnitOfWork unitOfWork)
+        public TourService(IUnitOfWork unitOfWork, IMapper mapper)
         {
             _unitOfWork = unitOfWork;
+            _mapper = mapper;
             _tourPlanner = new TourPlanner(new GroupTourPricingStrategy());
         }
 
         // Методи для планування турів
-        public void PlanGroupTour(TourCreationModel model)
+        public void PlanGroupTour(TourModel model)
         {
             _tourPlanner.SetPricingStrategy(new GroupTourPricingStrategy());
             CreateAndSaveTour(model);
         }
 
-        public void PlanPrivateTour(TourCreationModel model)
+        public void PlanPrivateTour(TourModel model)
         {
             _tourPlanner.SetPricingStrategy(new PrivateTourPricingStrategy());
             CreateAndSaveTour(model);
         }
 
-        private void CreateAndSaveTour(TourCreationModel model)
+        private void CreateAndSaveTour(TourModel model)
         {
-            var tour = _tourPlanner.CreateTour(model);
-            AddTour(tour);
+            var tourCreationModel = _mapper.Map<TourCreationModel>(model);
+            var tour = _tourPlanner.CreateTour(tourCreationModel);
+            AddTour(tour); // тепер це правильний виклик
         }
 
-        // CRUD операції
-        public void AddTour(Tour tour)
+        // Перевантажений метод
+        private void AddTour(Tour tour)
         {
             ValidateTour(tour);
             _unitOfWork.Tours.Add(tour);
             _unitOfWork.SaveChanges();
         }
 
-        public void UpdateTour(Tour tour)
+        // CRUD операції
+        public void AddTour(TourModel model)
         {
+            var tour = _mapper.Map<Tour>(model);  // Перетворення TourModel на Tour
+            ValidateTour(tour);
+            _unitOfWork.Tours.Add(tour);
+            _unitOfWork.SaveChanges();
+        }
+
+        public void UpdateTour(TourModel model)
+        {
+            var tour = _mapper.Map<Tour>(model);  // Перетворення TourModel на Tour
             ValidateTour(tour);
             _unitOfWork.Tours.Update(tour);
             _unitOfWork.SaveChanges();
@@ -62,63 +81,59 @@ namespace Museum.BLL.Services
         }
 
         // Методи для отримання даних з різними типами завантаження
-        public Tour GetTour(int id, bool eagerLoading = false)
+        public TourModel GetTour(int id, bool eagerLoading = false)
         {
-            return eagerLoading
+            var tour = eagerLoading
                 ? _unitOfWork.Tours.GetByIdWithExhibition(id)
                 : _unitOfWork.Tours.GetById(id);
+
+            return _mapper.Map<TourModel>(tour);  // Перетворення Tour на TourModel
         }
 
-        public Tour GetTourWithExhibition(int id)
+        public IEnumerable<TourModel> GetAllTours(bool includeExhibitions = false)
         {
-            return _unitOfWork.Tours.GetByIdWithExhibition(id);
-        }
-
-        public IEnumerable<Tour> GetAllToursWithExhibitions()
-        {
-            return _unitOfWork.Tours.GetAllWithExhibitions();
-        }
-
-        public IEnumerable<Tour> GetAllTours(bool includeExhibitions = false)
-        {
-            return includeExhibitions
-                ? _unitOfWork.Tours.GetAllWithExhibitions()
+            var tours = includeExhibitions
+                ? _unitOfWork.Tours.GetAllWithExhibitions()  // Має бути реалізований метод GetAllWithExhibitions в IUnitOfWork
                 : _unitOfWork.Tours.GetAll();
+
+            return _mapper.Map<IEnumerable<TourModel>>(tours);  // Перетворення Tour на TourModel
         }
 
         // Спеціалізовані методи
-        public IEnumerable<Tour> GetExhibitionTours(int exhibitionId, bool eagerLoading = false)
+        public IEnumerable<TourModel> GetExhibitionTours(int exhibitionId, bool eagerLoading = false)
         {
-            return eagerLoading
-                ? _unitOfWork.Tours.GetByExhibitionIdWithExhibition(exhibitionId)
+            var tours = eagerLoading
+                ? _unitOfWork.Tours.GetByExhibitionIdWithExhibition(exhibitionId)  // Має бути реалізований метод GetByExhibitionIdWithExhibition
                 : _unitOfWork.Tours.GetByExhibitionId(exhibitionId);
+
+            return _mapper.Map<IEnumerable<TourModel>>(tours);  // Перетворення Tour на TourModel
         }
 
-        public IEnumerable<Tour> GetPrivateTours(bool eagerLoading = false)
+        public IEnumerable<TourModel> GetPrivateTours(bool eagerLoading = false)
         {
             var tours = _unitOfWork.Tours.GetPrivateTours();
             return eagerLoading
                 ? IncludeExhibitions(tours)
-                : tours;
+                : _mapper.Map<IEnumerable<TourModel>>(tours);  // Перетворення Tour на TourModel
         }
 
-        public IEnumerable<Tour> GetScheduledTours(bool eagerLoading = false)
+        public IEnumerable<TourModel> GetScheduledTours(bool eagerLoading = false)
         {
             var tours = _unitOfWork.Tours.GetScheduledTours();
             return eagerLoading
                 ? IncludeExhibitions(tours)
-                : tours;
+                : _mapper.Map<IEnumerable<TourModel>>(tours);  // Перетворення Tour на TourModel
         }
 
-        public IEnumerable<Tour> SearchToursByGuide(string guideName, bool eagerLoading = false)
+        public IEnumerable<TourModel> SearchToursByGuide(string guideName, bool eagerLoading = false)
         {
             if (string.IsNullOrWhiteSpace(guideName))
-                return Enumerable.Empty<Tour>();
+                return Enumerable.Empty<TourModel>();
 
             var tours = _unitOfWork.Tours.GetByGuideName(guideName);
             return eagerLoading
                 ? IncludeExhibitions(tours)
-                : tours;
+                : _mapper.Map<IEnumerable<TourModel>>(tours);  // Перетворення Tour на TourModel
         }
 
         public decimal CalculateTourIncome(DateTime startDate, DateTime endDate)
@@ -129,13 +144,20 @@ namespace Museum.BLL.Services
         }
 
         // Допоміжні методи
-        private IEnumerable<Tour> IncludeExhibitions(IEnumerable<Tour> tours)
+        private IEnumerable<TourModel> IncludeExhibitions(IEnumerable<Tour> tours)
         {
             // Жадібне завантаження для існуючої колекції
             var tourIds = tours.Select(t => t.TourId).ToList();
-            return _unitOfWork.Tours.GetAllWithExhibitions()
+            var toursWithExhibitions = _unitOfWork.Tours.GetAllWithExhibitions()
                 .Where(t => tourIds.Contains(t.TourId));
+            return _mapper.Map<IEnumerable<TourModel>>(toursWithExhibitions);  // Перетворення Tour на TourModel
         }
+        public IEnumerable<TourModel> GetAllToursWithExhibitions()
+        {
+            var tours = _unitOfWork.Tours.GetAllWithExhibitions(); // Метод в репозиторії
+            return _mapper.Map<IEnumerable<TourModel>>(tours);
+        }
+
 
         private void ValidateTour(Tour tour)
         {

@@ -1,22 +1,28 @@
-﻿using Museum.DAL.Entities;
+﻿using AutoMapper;
+using Museum.DAL.Entities;
 using Museum.DAL.Interfaces;
 using Museum.BLL.Models.Reports;
+using Museum.BLL.Models;
+using Museum.DAL.UoW;
 
 namespace Museum.BLL.Services
 {
     public class ReportService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
 
-        public ReportService(IUnitOfWork unitOfWork)
+        public ReportService(IUnitOfWork unitOfWork, IMapper mapper)
         {
             _unitOfWork = unitOfWork;
+            _mapper = mapper;
         }
 
         // Звіт про поточні експозиції
-        public IEnumerable<Exhibition> GetCurrentExhibitionsReport()
+        public IEnumerable<ExhibitionModel> GetCurrentExhibitionsReport()
         {
-            return _unitOfWork.Exhibitions.GetCurrentExhibitions(DateTime.Now);
+            var exhibitions = _unitOfWork.Exhibitions.GetCurrentExhibitions(DateTime.Now);
+            return _mapper.Map<IEnumerable<ExhibitionModel>>(exhibitions);  // Перетворюємо Exhibition на ExhibitionModel
         }
 
         // Звіт про візити за період
@@ -25,15 +31,14 @@ namespace Museum.BLL.Services
             if (startDate > endDate)
                 throw new ArgumentException("Дата завершення має бути пізніше за дату початку");
 
-            // Ліниве завантаження візитів - запит виконується лише при ітерації
-            var visits = _unitOfWork.Visits.GetByDateRange(startDate, endDate);
+            var visits = _unitOfWork.Visits.GetByDateRange(startDate, endDate).ToList();
             var totalIncome = visits.Sum(v => v.TicketPrice);
 
             var visitsByExhibition = visits
                 .GroupBy(v => v.ExhibitionId)
                 .Select(g => new ExhibitionVisitStats
                 {
-                    Exhibition = _unitOfWork.Exhibitions.GetById(g.Key),
+                    Exhibition = _mapper.Map<ExhibitionModel>(_unitOfWork.Exhibitions.GetById(g.Key)),  // Мапінг Exhibition в ExhibitionModel
                     VisitCount = g.Count(),
                     TotalIncome = g.Sum(v => v.TicketPrice)
                 })
@@ -43,7 +48,7 @@ namespace Museum.BLL.Services
             {
                 StartDate = startDate,
                 EndDate = endDate,
-                TotalVisits = visits.Count(),
+                TotalVisits = visits.Count,
                 TotalIncome = totalIncome,
                 ExhibitionStats = visitsByExhibition.ToList()
             };
@@ -55,7 +60,6 @@ namespace Museum.BLL.Services
             if (startDate > endDate)
                 throw new ArgumentException("Дата завершення має бути пізніше за дату початку");
 
-            // Жадібне завантаження екскурсій - всі дані завантажуються одразу
             var tours = _unitOfWork.Tours.GetAll()
                 .Where(t => t.TourDate >= startDate && t.TourDate <= endDate)
                 .ToList();
@@ -91,18 +95,17 @@ namespace Museum.BLL.Services
             if (startDate > endDate)
                 throw new ArgumentException("Дата завершення має бути пізніше за дату початку");
 
-            // Ліниве завантаження візитів
-            var visits = _unitOfWork.Visits.GetByDateRange(startDate, endDate);
-
-            // Жадібне завантаження екскурсій
+            var visits = _unitOfWork.Visits.GetByDateRange(startDate, endDate).ToList();
             var tours = _unitOfWork.Tours.GetAll()
                 .Where(t => t.TourDate >= startDate && t.TourDate <= endDate)
                 .ToList();
 
-            var exhibitionsPopularity = _unitOfWork.Exhibitions.GetAll()
+            var exhibitions = _unitOfWork.Exhibitions.GetAll();
+
+            var exhibitionsPopularity = exhibitions
                 .Select(e => new ExhibitionPopularity
                 {
-                    Exhibition = e,
+                    Exhibition = _mapper.Map<ExhibitionModel>(e), // Мапінг Exhibition в ExhibitionModel
                     VisitsCount = visits.Count(v => v.ExhibitionId == e.ExhibitionId),
                     ToursCount = tours.Count(t => t.ExhibitionId == e.ExhibitionId),
                     TotalScore = visits.Count(v => v.ExhibitionId == e.ExhibitionId) +

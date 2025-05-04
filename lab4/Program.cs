@@ -7,6 +7,11 @@ using Museum.BLL.Services;
 using Museum.BLL.Strategies.Models;
 using System.Diagnostics;
 using System.Globalization;
+using Museum.DAL.UoW;
+using AutoMapper;
+using Museum.BLL.Mapping;
+using Museum.BLL.Models;
+using Microsoft.Extensions.DependencyInjection;
 
 
 namespace Museum.ConsoleUI
@@ -19,11 +24,13 @@ namespace Museum.ConsoleUI
         private static VisitService _visitService;
         private static TourService _tourService;
         private static ReportService _reportService;
+        private static IMapper _mapper;
 
         static void Main(string[] args)
         {
             Console.OutputEncoding = System.Text.Encoding.UTF8;
-            InitializeDatabase();
+            InitializeServices();
+            InitializeMapper();         
 
             while (true)
             {
@@ -68,23 +75,85 @@ namespace Museum.ConsoleUI
             }
         }
 
+        public static void InitializeServices()
+        {
+            var services = new ServiceCollection();
+
+            // Налаштування бази даних
+            services.AddDbContext<MuseumContext>(options =>
+                options.UseSqlite("Data Source=Museum.db"));
+
+            // AutoMapper
+            services.AddAutoMapper(typeof(MuseumProfile));
+
+            // Реєстрація репозиторіїв та сервісів
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
+            services.AddScoped<ExhibitionService>();
+            services.AddScoped<ScheduleService>();
+            services.AddScoped<VisitService>();
+            services.AddScoped<TourService>();
+            services.AddScoped<ReportService>();
+
+            var serviceProvider = services.BuildServiceProvider();
+
+            // Отримуємо екземпляри сервісів
+            _unitOfWork = serviceProvider.GetRequiredService<IUnitOfWork>();
+            _exhibitionService = serviceProvider.GetRequiredService<ExhibitionService>();
+            _scheduleService = serviceProvider.GetRequiredService<ScheduleService>();
+            _visitService = serviceProvider.GetRequiredService<VisitService>();
+            _tourService = serviceProvider.GetRequiredService<TourService>();
+            _reportService = serviceProvider.GetRequiredService<ReportService>();
+            _mapper = serviceProvider.GetRequiredService<IMapper>();
+
+            // Ініціалізація тестових даних
+            InitializeSampleData(serviceProvider.GetRequiredService<MuseumContext>());
+        }
+
+        private static void InitializeSampleData(MuseumContext context)
+        {
+            context.Database.EnsureCreated();
+
+            if (!context.Exhibitions.Any())
+            {
+                // Додавання тестових даних
+                var exhibitions = new List<Exhibition>
+        {
+            new Exhibition { Title = "Сучасне мистецтво", Theme = "Сучасне", TargetAudience = "Дорослі", StartDate = DateTime.Parse("2025-04-29"), EndDate = DateTime.Parse("2025-05-29") },
+            new Exhibition { Title = "Історія стародавнього світу", Theme = "Історичні", TargetAudience = "Всі", StartDate = DateTime.Parse("2025-04-24"), EndDate = DateTime.Parse("2025-05-24") },
+            new Exhibition { Title = "Ліс", Theme = "Природа", TargetAudience = "Дорослі", StartDate = DateTime.Parse("2025-05-09"), EndDate = DateTime.Parse("2025-06-05") }
+        };
+
+                context.Exhibitions.AddRange(exhibitions);
+                context.SaveChanges();
+            }
+        }
 
         static void InitializeDatabase()
         {
             var options = new DbContextOptionsBuilder<MuseumContext>()
-                .UseSqlite("Data Source=Museum.bd")
+                .UseSqlite("Data Source=Museum.db")
                 .Options;
 
             var context = new MuseumContext(options);
             context.Database.EnsureCreated();
             context.SaveChanges();
+
+            // Ініціалізація AutoMapper
+            var mapperConfiguration = new MapperConfiguration(cfg =>
+            {
+                cfg.CreateMap<Exhibition, ExhibitionModel>().ReverseMap();
+                // Додайте інші мапінги, які використовуються
+            });
+            IMapper mapper = mapperConfiguration.CreateMapper();
+
             var unitOfWork = new UnitOfWork(context);
 
-            _exhibitionService = new ExhibitionService(unitOfWork);
-            _scheduleService = new ScheduleService(unitOfWork);
-            _visitService = new VisitService(unitOfWork);
-            _tourService = new TourService(unitOfWork);
-            _reportService = new ReportService(unitOfWork);
+            // Тепер передаємо і unitOfWork, і mapper
+            _exhibitionService = new ExhibitionService(unitOfWork, mapper);
+            _scheduleService = new ScheduleService(unitOfWork, mapper);
+            _visitService = new VisitService(unitOfWork, mapper);
+            _tourService = new TourService(unitOfWork, mapper);
+            _reportService = new ReportService(unitOfWork, mapper);
 
             // Додамо тестові дані при першому запуску
             if (!_exhibitionService.GetAllExhibitions().Any())
@@ -92,11 +161,20 @@ namespace Museum.ConsoleUI
                 AddSampleData();
             }
         }
+        static void InitializeMapper()
+        {
+            var config = new MapperConfiguration(cfg =>
+        {
+        cfg.AddProfile<MuseumProfile>(); // ТУТ додається твій MuseumProfile
+        });
+
+        _mapper = config.CreateMapper();
+        }
 
         static void AddSampleData()
         {
             // Додаємо тестові експозиції
-            var exhibition1 = new Exhibition
+            var exhibition1 = new ExhibitionModel
             {
                 Title = "Сучасне мистецтво",
                 Theme = "Сучасне",
@@ -105,7 +183,7 @@ namespace Museum.ConsoleUI
                 EndDate = DateTime.Now.AddDays(25)
             };
 
-            var exhibition2 = new Exhibition
+            var exhibition2 = new ExhibitionModel
             {
                 Title = "Історія стародавнього світу",
                 Theme = "Історичне",
@@ -118,17 +196,17 @@ namespace Museum.ConsoleUI
             _exhibitionService.AddExhibition(exhibition2);
 
             // Додаємо розклади
-            var schedule1 = new Schedule
+            var schedule1 = new ScheduleModel
             {
-                Date = DateTime.Today,
+                ScheduledDate = DateTime.Today,
                 StartTime = new TimeSpan(10, 0, 0),
                 EndTime = new TimeSpan(18, 0, 0),
-                ExhibitionId = exhibition1.ExhibitionId
+                ExhibitionId = exhibition1.ExhibitionId // Після додавання потрібно отримати справжній ID!
             };
 
-            var schedule2 = new Schedule
+            var schedule2 = new ScheduleModel
             {
-                Date = DateTime.Today.AddDays(1),
+                ScheduledDate = DateTime.Today.AddDays(1),
                 StartTime = new TimeSpan(9, 0, 0),
                 EndTime = new TimeSpan(17, 0, 0),
                 ExhibitionId = exhibition2.ExhibitionId
@@ -139,6 +217,7 @@ namespace Museum.ConsoleUI
 
             Console.WriteLine("Додано тестові дані для демонстрації.");
         }
+
 
         #region Exhibition Management
         static void ManageExhibitions()
@@ -230,7 +309,8 @@ namespace Museum.ConsoleUI
                 Console.Write("Невірний формат дати або дата раніше початку. Спробуйте ще раз (рррр-мм-дд): ");
             }
 
-            var exhibition = new Exhibition
+            // !!! Змінено: створюємо ExhibitionModel, а не Exhibition
+            var exhibitionModel = new ExhibitionModel
             {
                 Title = title,
                 Theme = theme,
@@ -241,7 +321,7 @@ namespace Museum.ConsoleUI
 
             try
             {
-                _exhibitionService.AddExhibition(exhibition);
+                _exhibitionService.AddExhibition(exhibitionModel); // Передаємо правильну модель
                 Console.WriteLine("Експозицію успішно додано!");
             }
             catch (Exception ex)
@@ -249,6 +329,7 @@ namespace Museum.ConsoleUI
                 Console.WriteLine($"Помилка: {ex.Message}");
             }
         }
+
 
         static void EditExhibition()
         {
@@ -430,10 +511,11 @@ namespace Museum.ConsoleUI
             foreach (var s in schedules)
             {
                 var exhibition = _exhibitionService.GetExhibition(s.ExhibitionId);
-                Console.WriteLine($"{s.ScheduleId}\t{s.Date.ToShortDateString()}\t" +
+                Console.WriteLine($"{s.ScheduleId}\t{s.ScheduledDate.ToShortDateString()}\t" +
                     $"{s.StartTime}-{s.EndTime}\t{exhibition.Title}");
             }
         }
+
 
         static void AddSchedule()
         {
@@ -476,21 +558,24 @@ namespace Museum.ConsoleUI
                     Console.Write("Невірний формат часу або час раніше початку. Спробуйте ще раз (гг:хх): ");
                 }
 
-                var schedule = new Schedule
+                // Створюємо ScheduleModel замість Schedule (якщо ваш сервіс використовує BLL модель)
+                var scheduleModel = new ScheduleModel
                 {
-                    Date = date,
+                    ScheduledDate = date,
                     StartTime = startTime,
                     EndTime = endTime,
                     ExhibitionId = exhibitionId
                 };
 
+                // Перевірка доступності часу для ScheduleModel
                 if (!_scheduleService.IsTimeSlotAvailable(exhibitionId, date, startTime, endTime))
                 {
                     Console.WriteLine("Цей часовий слот вже зайнятий.");
                     return;
                 }
 
-                _scheduleService.AddSchedule(schedule);
+                // Додавання ScheduleModel в сервіс
+                _scheduleService.AddSchedule(scheduleModel);
                 Console.WriteLine("Розклад успішно додано!");
             }
             catch (Exception ex)
@@ -498,6 +583,7 @@ namespace Museum.ConsoleUI
                 Console.WriteLine($"Помилка: {ex.Message}");
             }
         }
+
 
         static void DeleteSchedule()
         {
@@ -540,7 +626,7 @@ namespace Museum.ConsoleUI
 
                 foreach (var s in schedules)
                 {
-                    Console.WriteLine($"{s.Date.ToShortDateString()}: {s.StartTime}-{s.EndTime}");
+                    Console.WriteLine($"{s.ScheduledDate.ToShortDateString()}: {s.StartTime}-{s.EndTime}");
                 }
             }
             catch (Exception ex)
@@ -560,10 +646,15 @@ namespace Museum.ConsoleUI
 
             try
             {
+                // Отримуємо всі слоти без сортування в SQL
                 var slots = _scheduleService.GetAvailableSchedules(date);
+
+                // Сортуємо на стороні клієнта
+                var sortedSlots = slots.OrderBy(s => s.StartTime).ToList();
+
                 Console.WriteLine("\nДоступні часові слоти:");
 
-                foreach (var s in slots)
+                foreach (var s in sortedSlots)
                 {
                     var exhibition = _exhibitionService.GetExhibition(s.ExhibitionId);
                     Console.WriteLine($"{s.StartTime}-{s.EndTime} - {exhibition.Title}");
@@ -574,7 +665,6 @@ namespace Museum.ConsoleUI
                 Console.WriteLine($"Помилка: {ex.Message}");
             }
         }
-        #endregion
 
         #region Visit Management
         static void ManageVisits()
@@ -677,7 +767,7 @@ namespace Museum.ConsoleUI
                     Console.Write("Невірний формат ціни. Спробуйте ще раз: ");
                 }
 
-                var visit = new Visit
+                var visitModel = new VisitModel
                 {
                     VisitorName = name,
                     VisitDate = visitDate,
@@ -685,7 +775,7 @@ namespace Museum.ConsoleUI
                     ExhibitionId = exhibitionId
                 };
 
-                _visitService.AddVisit(visit);
+                _visitService.AddVisit(visitModel);
                 Console.WriteLine("Візит успішно заплановано!");
             }
             catch (Exception ex)
@@ -693,6 +783,7 @@ namespace Museum.ConsoleUI
                 Console.WriteLine($"Помилка: {ex.Message}");
             }
         }
+
 
         static void DeleteVisit()
         {
@@ -854,9 +945,9 @@ namespace Museum.ConsoleUI
             Console.WriteLine("\n=== Список всіх екскурсій ===");
             Console.WriteLine("Завантаження: " + (eagerLoading ? "Жадібне" : "Ліниве"));
 
-            IEnumerable<Tour> tours;
+            IEnumerable<TourModel> tours;
             if (eagerLoading)
-                tours = _tourService.GetAllToursWithExhibitions();
+                tours = _tourService.GetAllToursWithExhibitions();  // Потрібно реалізувати цей метод
             else
                 tours = _tourService.GetAllTours();
 
@@ -868,22 +959,20 @@ namespace Museum.ConsoleUI
                 Console.Write($"{t.TourId}\t{t.TourDate.ToShortDateString()}\t{t.GuideName}\t{tourType}\t{t.Price}");
 
                 if (eagerLoading)
-                    Console.WriteLine($"\t{t.Exhibition?.Title}");
+                    Console.WriteLine($"\t{t.Exhibition?.Title}");  // Треба, щоб у TourModel була властивість ExhibitionModel Exhibition
                 else
                     Console.WriteLine();
             }
         }
+
 
         static void ShowTourDetails(int tourId, bool eagerLoading)
         {
             Console.WriteLine("\n=== Деталі туру ===");
             Console.WriteLine("Завантаження: " + (eagerLoading ? "Жадібне" : "Ліниве"));
 
-            Tour tour;
-            if (eagerLoading)
-                tour = _tourService.GetTourWithExhibition(tourId);
-            else
-                tour = _tourService.GetTour(tourId);
+            TourModel tour; // Змінено Tour -> TourModel
+            tour = _tourService.GetTour(tourId, eagerLoading); // Використовуємо один метод GetTour
 
             if (tour == null)
             {
@@ -904,10 +993,10 @@ namespace Museum.ConsoleUI
             }
             else
             {
-                // Ліниве завантаження - можна додатково завантажити дані
                 Console.WriteLine("\nДля перегляду деталей експозиції використовуйте жадібне завантаження");
             }
         }
+
 
         static void ShowLoadingApproachesComparison()
         {
@@ -930,7 +1019,7 @@ namespace Museum.ConsoleUI
             Console.WriteLine("\nТестування для одиночних записів:");
 
             sw.Restart();
-            var lazyTour = _tourService.GetTour(1);
+            var lazyTour = _tourService.GetTour(1); // Ліниве завантаження
             Console.WriteLine($"Ліниве завантаження (1 запит): {sw.ElapsedMilliseconds}ms");
 
             // Додатковий запит при доступі до зв'язаних даних
@@ -940,16 +1029,11 @@ namespace Museum.ConsoleUI
             Console.WriteLine($" + Додатковий запит для виставки: {sw.ElapsedMilliseconds}ms");
 
             sw.Restart();
-            var eagerTour = _tourService.GetTourWithExhibition(1);
+            var eagerTour = _tourService.GetTour(1, true); // Жадібне завантаження
             sw.Stop();
             Console.WriteLine($"Жадібне завантаження (1 запит): {sw.ElapsedMilliseconds}ms");
-
-            // Висновки
-            Console.WriteLine("\nВисновки:");
-            Console.WriteLine("- Ліниве завантаження краще для списків без деталей");
-            Console.WriteLine("- Жадібне завантаження ефективніше при роботі з пов'язаними даними");
-            Console.WriteLine("- Проблема N+1 виникає при лінивому завантаженні в циклах");
         }
+
 
         static void ShowAllTours()
         {
@@ -1006,7 +1090,8 @@ namespace Museum.ConsoleUI
                     Console.Write("Невірний формат ціни. Спробуйте ще раз: ");
                 }
 
-                var tour = new Tour
+                // Створюємо TourModel для передачі в BLL
+                var tourModel = new TourModel
                 {
                     TourDate = tourDate,
                     GuideName = guideName,
@@ -1015,7 +1100,9 @@ namespace Museum.ConsoleUI
                     ExhibitionId = exhibitionId
                 };
 
-                _tourService.AddTour(tour);
+                // Використовуємо AutoMapper або створюємо відповідний сервіс для додавання екскурсії
+                _tourService.AddTour(tourModel); // Передаємо TourModel у метод сервісу
+
                 Console.WriteLine("Екскурсію успішно додано!");
             }
             catch (Exception ex)
@@ -1318,12 +1405,20 @@ namespace Museum.ConsoleUI
                 return;
             }
 
-            model.ParticipantsCount = participantsCount;
+            // Створюємо TourModel
+            var tourModel = new TourModel
+            {
+                ExhibitionId = model.ExhibitionId,
+                TourDate = model.TourDate,
+                GuideName = model.GuideName,
+                IsPrivate = false, // Групова екскурсія
+            };
 
+            // Якщо потрібно зберігати додаткові дані, наприклад, кількість учасників
             try
             {
-                _tourService.PlanGroupTour(model);
-                Console.WriteLine($"\nГрупова екскурсія успішно запланована на {model.TourDate.ToShortDateString()}");
+                _tourService.PlanGroupTour(tourModel);
+                Console.WriteLine($"\nГрупова екскурсія успішно запланована на {tourModel.TourDate.ToShortDateString()}");
             }
             catch (Exception ex)
             {
@@ -1344,12 +1439,22 @@ namespace Museum.ConsoleUI
                 return;
             }
 
-            model.Duration = duration;
+            // Створюємо TourModel
+            var tourModel = new TourModel
+            {
+                ExhibitionId = model.ExhibitionId,
+                TourDate = model.TourDate,
+                GuideName = model.GuideName,
+                IsPrivate = true // Приватна екскурсія
+            };
+
+            // Якщо потрібно зберігати додаткові дані (наприклад, кількість учасників чи тривалість), зберігайте їх окремо
+            int participantsCount = 0; // Якщо необхідно, додайте логіку для кількості учасників
 
             try
             {
-                _tourService.PlanPrivateTour(model);
-                Console.WriteLine($"\nПриватна екскурсія успішно запланована на {model.TourDate.ToShortDateString()}");
+                _tourService.PlanPrivateTour(tourModel);
+                Console.WriteLine($"\nПриватна екскурсія успішно запланована на {tourModel.TourDate.ToShortDateString()}");
             }
             catch (Exception ex)
             {
@@ -1394,5 +1499,5 @@ namespace Museum.ConsoleUI
         }
     }
 }
-
+#endregion
 
