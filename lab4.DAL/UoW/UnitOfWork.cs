@@ -1,9 +1,10 @@
 ﻿using Museum.DAL.Context;
 using Museum.DAL.Interfaces;
+using Museum.DAL.Repositories;
 
-namespace Museum.DAL.Repositories
+namespace Museum.DAL.UoW
 {
-    public class UnitOfWork : IUnitOfWork
+    public class UnitOfWork : IDisposable, IUnitOfWork
     {
         private readonly MuseumContext _context;
 
