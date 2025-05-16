@@ -39,6 +39,7 @@ namespace Museum.Tests.Services
         }
 
         [Fact]
+        // Тест генерації звіту по візитах у вказаному діапазоні дат
         public void GenerateVisitsReport_ValidRange_ReturnsCorrectReport()
         {
             // Arrange
@@ -55,22 +56,25 @@ namespace Museum.Tests.Services
             var exhibition1 = new Exhibition { ExhibitionId = 1, Title = "Art" };
             var exhibition2 = new Exhibition { ExhibitionId = 2, Title = "History" };
 
+            // Налаштовуємо моки: візити за діапазоном та отримання виставок по ID
             _visitRepoMock.Setup(r => r.GetByDateRange(startDate, endDate)).Returns(visits);
             _exhibitionRepoMock.Setup(r => r.GetById(1)).Returns(exhibition1);
             _exhibitionRepoMock.Setup(r => r.GetById(2)).Returns(exhibition2);
 
-            // Act
+            // Генеруємо звіт
             var report = _reportService.GenerateVisitsReport(startDate, endDate);
 
-            // Assert
+            // Перевіряємо правильність результатів
             Assert.Equal(3, report.TotalVisits);
             Assert.Equal(225, report.TotalIncome);
             Assert.Equal(2, report.ExhibitionStats.Count);
 
+            // Перевірка статистики для виставки 1
             var stat1 = report.ExhibitionStats.First(x => x.Exhibition.ExhibitionId == 1);
             Assert.Equal(2, stat1.VisitCount);
             Assert.Equal(150, stat1.TotalIncome);
 
+            // Перевірка статистики для виставки 2
             var stat2 = report.ExhibitionStats.First(x => x.Exhibition.ExhibitionId == 2);
             Assert.Equal(1, stat2.VisitCount);
             Assert.Equal(75, stat2.TotalIncome);

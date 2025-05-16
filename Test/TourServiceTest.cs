@@ -23,9 +23,10 @@ public class TourServiceTests
     }
 
     [Fact]
+    // Тест: успішне планування групової екскурсії
     public void PlanGroupTour_ValidTour_AddsTourSuccessfully()
     {
-        // Arrange
+        // створення вхідної моделі для планування екскурсії
         var model = new TourModel
         {
             ExhibitionId = 1,
@@ -35,6 +36,7 @@ public class TourServiceTests
             Price = 500
         };
 
+        // Проміжна модель створення екскурсії
         var creationModel = new TourCreationModel
         {
             ExhibitionId = model.ExhibitionId,
@@ -44,6 +46,7 @@ public class TourServiceTests
             ParticipantsCount = model.ParticipantsCount
         };
 
+        // Сутність екскурсії, яка зберігатиметься в базі даних
         var tour = new Tour
         {
             ExhibitionId = model.ExhibitionId,
@@ -60,10 +63,8 @@ public class TourServiceTests
         // Підміна мапінгу для TourModel → Tour
         _mapperMock.Setup(m => m.Map<Tour>(It.IsAny<TourModel>())).Returns(tour);
 
-        // Act
         _tourService.PlanGroupTour(model);
 
-        // Assert
         _unitOfWorkMock.Verify(u => u.Tours.Add(It.IsAny<Tour>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChanges(), Times.Once);
     }

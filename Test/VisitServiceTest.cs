@@ -28,7 +28,7 @@ namespace Museum.Tests.Services
             _unitOfWorkMock.Setup(u => u.Visits).Returns(_visitRepoMock.Object);
             _unitOfWorkMock.Setup(u => u.Exhibitions).Returns(_exhibitionRepoMock.Object);
 
-            // Mapper configuration
+            // Налаштування AutoMapper для перетворення VisitModel ↔ Visit
             var config = new MapperConfiguration(cfg =>
             {
                 cfg.CreateMap<VisitModel, Visit>();
@@ -42,7 +42,7 @@ namespace Museum.Tests.Services
         [Fact]
         public void AddVisit_ValidModel_AddsVisitAndSavesChanges()
         {
-            // Arrange
+            // Створюється об'єкт-модель візиту, яку передамо в сервіс
             var visitModel = new VisitModel
             {
                 ExhibitionId = 1,
@@ -50,13 +50,13 @@ namespace Museum.Tests.Services
                 VisitDate = DateTime.Today.AddDays(1),
                 TicketPrice = 100
             };
-
+            // Імітація: виставка з таким ID існує
             _exhibitionRepoMock.Setup(repo => repo.GetById(1)).Returns(new Exhibition { ExhibitionId = 1 });
 
-            // Act
+            // Виклик методу, який тестуємо
             _visitService.AddVisit(visitModel);
 
-            // Assert
+            // Перевірка очікуваної поведінки
             _visitRepoMock.Verify(r => r.Add(It.IsAny<Visit>()), Times.Once);
             _unitOfWorkMock.Verify(u => u.SaveChanges(), Times.Once);
         }

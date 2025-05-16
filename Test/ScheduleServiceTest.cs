@@ -37,6 +37,7 @@ public class ScheduleServiceTests
     }
 
     [Fact]
+    // Тест: Додавання коректного розкладу
     public void AddSchedule_ValidModel_AddsSchedule()
     {
         var model = new ScheduleModel
@@ -56,12 +57,14 @@ public class ScheduleServiceTests
     }
 
     [Fact]
+    // Тест: передано null замість моделі — очікується виняток
     public void AddSchedule_NullModel_ThrowsException()
     {
         Assert.Throws<ArgumentNullException>(() => _scheduleService.AddSchedule(null));
     }
 
     [Fact]
+    // Тест: час завершення менший за час початку — очікується виняток
     public void AddSchedule_EndTimeBeforeStartTime_ThrowsException()
     {
         var model = new ScheduleModel
@@ -76,6 +79,7 @@ public class ScheduleServiceTests
     }
 
     [Fact]
+    // Тест: успішне видалення розкладу за валідним ID
     public void DeleteSchedule_ValidId_DeletesSchedule()
     {
         _mockScheduleRepo.Setup(r => r.GetById(1)).Returns(new Schedule());
@@ -87,6 +91,7 @@ public class ScheduleServiceTests
     }
 
     [Fact]
+    // Тест: спроба видалення неіснуючого розкладу — очікується виняток
     public void DeleteSchedule_NotFound_ThrowsException()
     {
         _mockScheduleRepo.Setup(r => r.GetById(1)).Returns((Schedule)null);
@@ -95,6 +100,7 @@ public class ScheduleServiceTests
     }
 
     [Fact]
+    // Тест: отримання розкладу за ID — повертається правильна модель
     public void GetSchedule_ValidId_ReturnsSchedule()
     {
         var schedule = new Schedule { ExhibitionId = 1 };
@@ -107,6 +113,7 @@ public class ScheduleServiceTests
     }
 
     [Fact]
+    // Тест: перевірка доступності часу — якщо немає конфліктів, повертається true
     public void IsTimeSlotAvailable_NoConflicts_ReturnsTrue()
     {
         _mockScheduleRepo.Setup(r => r.GetByExhibitionId(1)).Returns(new List<Schedule>());
@@ -117,6 +124,7 @@ public class ScheduleServiceTests
     }
 
     [Fact]
+    // Тест: перевірка доступності часу — якщо є конфлікт у часі, повертається false
     public void IsTimeSlotAvailable_WithConflict_ReturnsFalse()
     {
         _mockScheduleRepo.Setup(r => r.GetByExhibitionId(1)).Returns(new List<Schedule>
