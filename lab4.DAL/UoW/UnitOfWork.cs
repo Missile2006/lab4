@@ -27,13 +27,13 @@ namespace Museum.DAL.UoW
             return _context.SaveChanges();
         }
 
-        private bool disposed = false;
+        private bool disposed = false; // Прапорець для перевірки, чи вже було здійснено звільнення ресурсів
 
         protected virtual void Dispose(bool disposing)
         {
             if (!disposed && disposing)
             {
-                _context.Dispose();
+                _context.Dispose(); // Звільняємо контекст, якщо ще не був звільнений
             }
             disposed = true;
         }

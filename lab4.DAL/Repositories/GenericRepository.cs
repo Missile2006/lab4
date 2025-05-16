@@ -2,6 +2,7 @@
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using Museum.DAL.Context;
+using Museum.DAL.Interfaces;
 
 namespace Museum.DAL.Repositories
 {

@@ -22,7 +22,7 @@ namespace Museum.BLL.Services
         public IEnumerable<ExhibitionModel> GetCurrentExhibitionsReport()
         {
             var exhibitions = _unitOfWork.Exhibitions.GetCurrentExhibitions(DateTime.Now);
-            return _mapper.Map<IEnumerable<ExhibitionModel>>(exhibitions);  // Перетворюємо Exhibition на ExhibitionModel
+            return _mapper.Map<IEnumerable<ExhibitionModel>>(exhibitions);  
         }
 
         // Звіт про візити за період
@@ -38,7 +38,7 @@ namespace Museum.BLL.Services
                 .GroupBy(v => v.ExhibitionId)
                 .Select(g => new ExhibitionVisitStats
                 {
-                    Exhibition = _mapper.Map<ExhibitionModel>(_unitOfWork.Exhibitions.GetById(g.Key)),  // Мапінг Exhibition в ExhibitionModel
+                    Exhibition = _mapper.Map<ExhibitionModel>(_unitOfWork.Exhibitions.GetById(g.Key)),  
                     VisitCount = g.Count(),
                     TotalIncome = g.Sum(v => v.TicketPrice)
                 })
@@ -105,7 +105,7 @@ namespace Museum.BLL.Services
             var exhibitionsPopularity = exhibitions
                 .Select(e => new ExhibitionPopularity
                 {
-                    Exhibition = _mapper.Map<ExhibitionModel>(e), // Мапінг Exhibition в ExhibitionModel
+                    Exhibition = _mapper.Map<ExhibitionModel>(e), 
                     VisitsCount = visits.Count(v => v.ExhibitionId == e.ExhibitionId),
                     ToursCount = tours.Count(t => t.ExhibitionId == e.ExhibitionId),
                     TotalScore = visits.Count(v => v.ExhibitionId == e.ExhibitionId) +

@@ -2,7 +2,6 @@
 using Museum.DAL.Entities;
 using Museum.DAL.Interfaces;
 using Museum.BLL.Models;
-using Museum.BLL.DTO;
 using Museum.DAL.UoW;
 
 namespace Museum.BLL.Services
@@ -18,9 +17,6 @@ namespace Museum.BLL.Services
             _mapper = mapper;
         }
 
-
-
-        // Додати експозицію
         public void AddExhibition(ExhibitionModel exhibitionModel)
         {
             if (exhibitionModel == null)
@@ -37,7 +33,6 @@ namespace Museum.BLL.Services
             _unitOfWork.SaveChanges();
         }
 
-        // Оновити експозицію
         public void UpdateExhibition(ExhibitionModel exhibitionModel)
         {
             if (exhibitionModel == null)
@@ -58,7 +53,6 @@ namespace Museum.BLL.Services
             _unitOfWork.SaveChanges();
         }
 
-        // Видалити експозицію
         public void DeleteExhibition(int id)
         {
             var exhibition = _unitOfWork.Exhibitions.GetById(id);

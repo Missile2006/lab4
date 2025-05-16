@@ -2,7 +2,7 @@
 using Museum.DAL.Entities;
 using Museum.DAL.Interfaces;
 using Museum.BLL.Models;
-using Museum.DAL.UoW; // припустимо, тут лежить ScheduleModel
+using Museum.DAL.UoW; 
 
 namespace Museum.BLL.Services
 {
@@ -17,7 +17,6 @@ namespace Museum.BLL.Services
             _mapper = mapper;
         }
 
-        // Додати розклад
         public void AddSchedule(ScheduleModel scheduleModel)
         {
             if (scheduleModel == null)
@@ -26,14 +25,11 @@ namespace Museum.BLL.Services
             if (scheduleModel.StartTime >= scheduleModel.EndTime)
                 throw new ArgumentException("Час завершення має бути пізніше за час початку");
 
-            // Отримуємо виставку за ID
             var exhibition = _unitOfWork.Exhibitions.GetById(scheduleModel.ExhibitionId);
 
-            // Якщо виставки немає — викидаємо помилку з поясненням
             if (exhibition == null)
                 throw new KeyNotFoundException($"Експозицію з ID={scheduleModel.ExhibitionId} не знайдено. Перевірте правильність ID.");
 
-            // Якщо все добре — створюємо розклад
             var schedule = _mapper.Map<Schedule>(scheduleModel);
             _unitOfWork.Schedules.Add(schedule);
             _unitOfWork.SaveChanges();

@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Museum.DAL.Entities;
 
-namespace Museum.DAL.Repositories
+namespace Museum.DAL.Interfaces
 {
     public interface IGenericRepository<TModel> where TModel : class
     {

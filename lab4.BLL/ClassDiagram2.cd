@@ -1,0 +1,143 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="Museum.DAL.Repositories.ExhibitionRepository" Collapsed="true">
+    <Position X="2.25" Y="2" Width="1.5" />
+    <TypeIdentifier />
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="Museum.DAL.Repositories.GenericRepository&lt;TModel&gt;" Collapsed="true">
+    <Position X="5.5" Y="0.75" Width="1.5" />
+    <TypeIdentifier />
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="Museum.DAL.Repositories.ScheduleRepository" Collapsed="true">
+    <Position X="4.5" Y="2" Width="1.5" />
+    <TypeIdentifier />
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="Museum.DAL.Repositories.TourRepository" Collapsed="true">
+    <Position X="6.75" Y="2" Width="1.5" />
+    <TypeIdentifier />
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="Museum.DAL.Repositories.VisitRepository" Collapsed="true">
+    <Position X="9" Y="2" Width="1.5" />
+    <TypeIdentifier />
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="Museum.DAL.UoW.UnitOfWork" Collapsed="true">
+    <Position X="11.75" Y="0.75" Width="1.5" />
+    <TypeIdentifier />
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="Museum.BLL.Services.ExhibitionService" Collapsed="true">
+    <Position X="2.25" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAgCAAgABAAAAAQAAAAACAAAAAAAgMgA=</HashCode>
+      <FileName>Services\ExhibitionService.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Museum.BLL.Services.ReportService" Collapsed="true">
+    <Position X="4" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAACAAAAAQAAAgABAAAAAAAAAAAEAAAAAAAAAAg=</HashCode>
+      <FileName>Services\ReportService.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Museum.BLL.Services.ScheduleService" Collapsed="true">
+    <Position X="5.75" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAgEBAAQAAACABAAAAhAAAAAACAA=</HashCode>
+      <FileName>Services\ScheduleService.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Museum.BLL.Services.TourService" Collapsed="true">
+    <Position X="2.25" Y="4.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>ACCEAAAAAAAIgIAAAwBDAAAEAEAAEAEBAAAAMAAIAAA=</HashCode>
+      <FileName>Services\TourService.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Museum.BLL.Services.VisitService" Collapsed="true">
+    <Position X="4" Y="4.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAEAAAAAAABAAAAAoABAIAAAAAABQAAAAAEAAAAAAA=</HashCode>
+      <FileName>Services\VisitService.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Museum.BLL.Models.Reports.ExhibitionPopularity" Collapsed="true">
+    <Position X="10" Y="3.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAIAAAAAACAAAAAAAAAAAQAABAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Models\Reports\ExhibitionPopularity.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Museum.BLL.Models.Reports.ExhibitionVisitStats" Collapsed="true">
+    <Position X="11.75" Y="3.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAQACAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Models\Reports\ExhibitionVisitStats.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Museum.BLL.Models.Reports.GuideTourStats" Collapsed="true">
+    <Position X="13.5" Y="3.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAACAAAAAAAAAAAAIIAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Models\Reports\GuideTourStats.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Museum.BLL.Models.Reports.PopularExhibitionsReport" Collapsed="true">
+    <Position X="8.25" Y="4.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAABAAAAAAAAAgAAAAAAAAAAAAAEAAAAA=</HashCode>
+      <FileName>Models\Reports\PopularExhibitionsReport.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Museum.BLL.Models.Reports.ToursReport" Collapsed="true">
+    <Position X="13.5" Y="4.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAACAAAAAAAAAAAAAAgAAAAACAIgAAAAEAAAAA=</HashCode>
+      <FileName>Models\Reports\ToursReport.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Museum.BLL.Models.Reports.VisitsReport" Collapsed="true">
+    <Position X="10" Y="5.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAACAAAAAAAAAAAAIAgAAAAAAAAAAAgAEAAAAA=</HashCode>
+      <FileName>Models\Reports\VisitsReport.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Museum.BLL.Models.ExhibitionModel" Collapsed="true">
+    <Position X="8.25" Y="3.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAEQQAAAAAAAgAEAAAAQAAAAAAEAAAIA=</HashCode>
+      <FileName>Models\ExhibitionModel.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Museum.BLL.Models.ScheduleModel" Collapsed="true">
+    <Position X="10" Y="4.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAABAAAAAAAAAIAAwAAQAAAAAAAAAAAA=</HashCode>
+      <FileName>Models\ScheduleModel.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Museum.BLL.Models.TourModel" Collapsed="true">
+    <Position X="11.75" Y="4.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAEAAAAQQACAAAAAAAAAAIAAAAAAAQAAAAEAAAAAAA=</HashCode>
+      <FileName>Models\TourModel.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Museum.BLL.Models.VisitModel" Collapsed="true">
+    <Position X="8.25" Y="5.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AACAAAAAQAAAAAAAAAAAgAAAAAAAAAQAAAAAEAAAAAA=</HashCode>
+      <FileName>Models\VisitModel.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Interface Name="Museum.DAL.Repositories.IGenericRepository&lt;TModel&gt;" Collapsed="true">
+    <Position X="10" Y="0.75" Width="1.5" />
+    <TypeIdentifier />
+  </Interface>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

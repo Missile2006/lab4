@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
-using Museum.BLL.DTO;
 using Museum.BLL.Models;
+using Museum.BLL.Strategies.Models;
 using Museum.DAL.Entities;
 
 namespace Museum.BLL.Mapping
@@ -32,7 +32,7 @@ namespace Museum.BLL.Mapping
                 .ForMember(dest => dest.GuideName, opt => opt.MapFrom(src => src.GuideName))
                 .ForMember(dest => dest.TourDate, opt => opt.MapFrom(src => src.TourDate))
                 .ForMember(dest => dest.IsPrivate, opt => opt.MapFrom(src => src.IsPrivate))
-                .ForMember(dest => dest.Price, opt => opt.MapFrom(src => src.Price)); // Мапимо ціну
+                .ForMember(dest => dest.Price, opt => opt.MapFrom(src => src.Price)); 
             CreateMap<TourModel, Tour>()
                 .ForMember(dest => dest.TourDate, opt => opt.MapFrom(src => src.TourDate))
                 .ForMember(dest => dest.Price, opt => opt.MapFrom(src => src.Price))
@@ -45,15 +45,18 @@ namespace Museum.BLL.Mapping
                 .ForMember(dest => dest.ExhibitionId, opt => opt.MapFrom(src => src.ExhibitionId))
                 .ForMember(dest => dest.VisitorName, opt => opt.MapFrom(src => src.VisitorName))
                 .ForMember(dest => dest.VisitDate, opt => opt.MapFrom(src => src.VisitDate))
-                .ForMember(dest => dest.TicketPrice, opt => opt.MapFrom(src => src.TicketPrice)); // Мапимо ціну квитка
+                .ForMember(dest => dest.TicketPrice, opt => opt.MapFrom(src => src.TicketPrice)); 
             CreateMap<VisitModel, Visit>();
-
-            // Налаштування маппінгу між Exhibition та ExhibitionDto
-            CreateMap<Exhibition, ExhibitionDto>().ReverseMap(); // Двосторонній маппінг
 
             // Зворотний маппінг для ScheduleModel -> Schedule
             CreateMap<ScheduleModel, Schedule>()
                 .ForMember(dest => dest.Date, opt => opt.MapFrom(src => src.ScheduledDate));
+
+            CreateMap<TourModel, TourCreationModel>()
+    .ForMember(dest => dest.ParticipantsCount, opt => opt.MapFrom(src => src.ParticipantsCount))
+    .ForMember(dest => dest.GuideName, opt => opt.MapFrom(src => src.GuideName))
+    .ForMember(dest => dest.TourDate, opt => opt.MapFrom(src => src.TourDate))
+    .ForMember(dest => dest.ExhibitionId, opt => opt.MapFrom(src => src.ExhibitionId));
         }
     }
 }

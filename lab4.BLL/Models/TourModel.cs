@@ -7,7 +7,8 @@
         public string GuideName { get; set; }
         public DateTime TourDate { get; set; }
         public bool IsPrivate { get; set; }
-        public decimal Price { get; set; } // Ціна екскурсії
+        public decimal Price { get; set; }
+        public int ParticipantsCount { get; set; }
 
         public ExhibitionModel Exhibition { get; set; }
     }

@@ -9,6 +9,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Museum.DAL", "lab4.DAL\Muse
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Museum.BLL", "lab4.BLL\Museum.BLL.csproj", "{D108B184-7DF5-49AC-B6A0-5E517EA96E3F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "Test\Tests.csproj", "{EB2DF1CA-960D-4959-A9AC-33581A1E291C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{D108B184-7DF5-49AC-B6A0-5E517EA96E3F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D108B184-7DF5-49AC-B6A0-5E517EA96E3F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D108B184-7DF5-49AC-B6A0-5E517EA96E3F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EB2DF1CA-960D-4959-A9AC-33581A1E291C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EB2DF1CA-960D-4959-A9AC-33581A1E291C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EB2DF1CA-960D-4959-A9AC-33581A1E291C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EB2DF1CA-960D-4959-A9AC-33581A1E291C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
