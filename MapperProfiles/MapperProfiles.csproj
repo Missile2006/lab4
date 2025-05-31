@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\lab4.BLL\Museum.BLL.csproj" />
+    <ProjectReference Include="..\lab4.DAL\Museum.DAL.csproj" />
+  </ItemGroup>
+
+</Project>
