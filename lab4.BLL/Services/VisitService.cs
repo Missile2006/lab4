@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Museum.BLL.Interfaces;
 using Museum.BLL.Models;
 using Museum.DAL.Entities;
 using Museum.DAL.Interfaces;
@@ -6,7 +7,7 @@ using Museum.DAL.UoW;
 
 namespace Museum.BLL.Services
 {
-    public class VisitService
+    public class VisitService : IVisitService
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;

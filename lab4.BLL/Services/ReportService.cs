@@ -4,10 +4,11 @@ using Museum.DAL.Interfaces;
 using Museum.BLL.Models.Reports;
 using Museum.BLL.Models;
 using Museum.DAL.UoW;
+using Museum.BLL.Interfaces;
 
 namespace Museum.BLL.Services
 {
-    public class ReportService
+    public class ReportService : IReportService
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;

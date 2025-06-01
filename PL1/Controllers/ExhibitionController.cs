@@ -3,6 +3,7 @@ using Museum.BLL.Services;
 using AutoMapper;
 using Dtos.DTO;
 using Museum.BLL.Models;
+using Museum.BLL.Interfaces;
 
 namespace Museum.WebAPI.Controllers
 {
@@ -10,10 +11,10 @@ namespace Museum.WebAPI.Controllers
     [Route("api/[controller]")]
     public class ExhibitionController : ControllerBase
     {
-        private readonly ExhibitionService _exhibitionService;
+        private readonly IExhibitionService _exhibitionService;
         private readonly IMapper _mapper;
 
-        public ExhibitionController(ExhibitionService exhibitionService, IMapper mapper)
+        public ExhibitionController(IExhibitionService exhibitionService, IMapper mapper)
         {
             _exhibitionService = exhibitionService;
             _mapper = mapper;

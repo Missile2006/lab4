@@ -5,10 +5,11 @@ using Museum.DAL.Interfaces;
 using Museum.BLL.Strategies;
 using Museum.BLL.Strategies.Pricing;
 using Museum.BLL.Strategies.Models;
+using Museum.BLL.Interfaces;
 
 namespace Museum.BLL.Services
 {
-    public class TourService
+    public class TourService : ITourService
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;

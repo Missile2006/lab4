@@ -1,31 +1,39 @@
-using AutoMapper;
-using Museum.BLL.Mapping;
-using Museum.BLL.Services;
 using Museum.DAL.Context;
 using Museum.DAL.Interfaces;
 using Museum.DAL.UoW;
 using Microsoft.OpenApi.Models;
+using Museum.BLL.Interfaces; 
+using Museum.BLL.Services;
+using Microsoft.EntityFrameworkCore;
+using Museum.BLL.Mapping;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddControllers();
 
-// DbContext
-builder.Services.AddDbContext<MuseumContext>();
+builder.Services.AddDbContext<MuseumContext>(options =>
+    options.UseSqlite("Data Source=Museum.db"));
 
-// AutoMapper
 builder.Services.AddAutoMapper(typeof(MuseumProfile));
 
-// Unit of Work and Services
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-builder.Services.AddScoped<ExhibitionService>();
-builder.Services.AddScoped<ScheduleService>();
-builder.Services.AddScoped<VisitService>();
-builder.Services.AddScoped<TourService>();
-builder.Services.AddScoped<ReportService>();
 
-// Swagger configuration
+builder.Services.AddScoped<IExhibitionService, ExhibitionService>();
+builder.Services.AddScoped<IReportService, ReportService>();
+builder.Services.AddScoped<IScheduleService, ScheduleService>();
+builder.Services.AddScoped<ITourService, TourService>();
+builder.Services.AddScoped<IVisitService, VisitService>();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -41,7 +49,6 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 
-    // Include XML comments if available
     var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
     if (File.Exists(xmlPath))
@@ -52,18 +59,25 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<MuseumContext>();
+    dbContext.Database.EnsureCreated();
+}
+
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "Museum API V1");
-        c.RoutePrefix = "swagger"; // Set Swagger UI at the root
+        c.RoutePrefix = "swagger"; 
     });
 }
 
 app.UseHttpsRedirection();
+app.UseCors("AllowAll");
 app.UseAuthorization();
 app.MapControllers();
 

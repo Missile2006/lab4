@@ -3,10 +3,11 @@ using Museum.DAL.Entities;
 using Museum.DAL.Interfaces;
 using Museum.BLL.Models;
 using Museum.DAL.UoW;
+using Museum.BLL.Interfaces;
 
 namespace Museum.BLL.Services
 {
-    public class ExhibitionService
+    public class ExhibitionService : IExhibitionService
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;

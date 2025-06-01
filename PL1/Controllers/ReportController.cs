@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Museum.BLL.Interfaces;
 using Museum.BLL.Services;
 
 namespace Museum.WebAPI.Controllers
@@ -7,9 +8,9 @@ namespace Museum.WebAPI.Controllers
     [Route("api/[controller]")]
     public class ReportController : ControllerBase
     {
-        private readonly ReportService _reportService;
+        private readonly IReportService _reportService;
 
-        public ReportController(ReportService reportService)
+        public ReportController(IReportService reportService)
         {
             _reportService = reportService;
         }
